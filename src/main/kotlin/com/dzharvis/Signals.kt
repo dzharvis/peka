@@ -8,7 +8,7 @@ class Signal(var signal: Boolean) {
     private val dependentGates = mutableSetOf<Gate>()
     private var isUninitialized: Boolean = true
     // trampoline magic to avoid stack overflow in complex schemes
-    fun notifySignalChanged() {
+    private fun notifySignalChanged() {
         val dependencies = LinkedList<Gate>()
         dependencies.addAll(dependentGates)
         while (dependencies.isNotEmpty()) {
@@ -20,17 +20,15 @@ class Signal(var signal: Boolean) {
     }
 
     fun forceUpdate(newSignal: Boolean) {
-        if (signal != newSignal || isUninitialized) {
-            isUninitialized = false
-            signal = newSignal
-            notifySignalChanged()
-        }
+        update(newSignal)
+        notifySignalChanged()
     }
 
     fun subscribe(gate: Gate) = dependentGates.add(gate)
-    override fun toString() = if(signal) "[x]" else "[ ]"
+    override fun toString() = if (signal) "[x]" else "[ ]"
     fun update(newValue: Boolean): Set<Gate> {
-        return if (signal != newValue) {
+        return if (signal != newValue || isUninitialized) {
+            isUninitialized = false
             signal = newValue
             dependentGates
         } else {
@@ -48,6 +46,7 @@ fun List<Boolean>.asSig() = this.map { it.sig() }
 fun Boolean.sig() = Signal(this)
 
 typealias SignalIndex = MutableMap<String, Signal>
+
 fun SignalIndex.extract(vararg names: String): Signals = names.map {
     this.putIfAbsent(it, Signal(false))
     this[it]!!

@@ -12,10 +12,26 @@ abstract class Gate(input: Signals) {
 
 // for debugging
 class LED(val input: Signals, val name: String = "LED") : Gate(input) {
+    var prevState = input[0].signal
     override fun mutateOutput(): Set<Gate> {
-        println("$name: ${input.joinToString()}")
+//        if (prevState != input[0].signal) {
+//            prevState = input[0].signal
+            println("$name: ${input.joinToString()}")
+//        }
+//        println("$name: ${input.joinToString()}")
         return emptySet()
     }
+}
+
+// for debugging
+class ST_DBG(val input: Signals) : Gate(input) {
+    val states = mutableListOf<Boolean>()
+    override fun mutateOutput(): Set<Gate> {
+        states.add(input[0].signal)
+        return emptySet()
+    }
+
+    fun reset() = states.clear()
 }
 
 class NOT(val input: Signals, val output: Signals) : Gate(input) {
@@ -24,6 +40,14 @@ class NOT(val input: Signals, val output: Signals) : Gate(input) {
 
 class AND(val input: Signals, val output: Signals) : Gate(input) {
     override fun mutateOutput() = output[0].update(input[0].signal and input[1].signal)
+}
+
+class AND3(val input: Signals, val output: Signals) : Gate(input) {
+    override fun mutateOutput() = output[0].update(input[0].signal and input[1].signal and input[2].signal)
+}
+
+class NAND3(val input: Signals, val output: Signals) : Gate(input) {
+    override fun mutateOutput() = output[0].update((input[0].signal and input[1].signal and input[2].signal).not())
 }
 
 class NAND(val input: Signals, val output: Signals) : Gate(input) {
@@ -74,8 +98,8 @@ fun fullAdder4(input: Signals, output: Signals): Signals {
 
 fun pulser(input: Signals, output: Signals): Signals {
     val not = sigs(1)
-    // AND should be updated first to achieve short Pulse effect as in real circuit
     val and = AND(input + not, output).output
+    // AND should be updated first to achieve short Pulse effect as in real circuit
     NOT(input, not)
     return and
 }
@@ -99,5 +123,27 @@ fun dLatch(input: Signals, output: Signals): Signals {
     val nor2Out = output.subSignal(1)
     NOR(and1 + nor2Out, nor1Out).output
     NOR(and2 + nor1Out, nor2Out).output
+    return output
+}
+
+fun msJKFlipFlop(input: Signals, output: Signals): Signals {
+    val j = input.subSignal(0)
+    val k = input.subSignal(1)
+    val clk_ = NOT(input.subSignal(2), sigs(1)).output
+    val clk = pulser(clk_, sigs(1))
+    val nclk = NOT(clk, sigs(1)).output
+
+    val q = output.subSignal(0)
+    val nq = output.subSignal(1)
+    val and3outp1 = NAND3(j + nq + clk, sigs(1)).output
+    val and3outp2 = NAND3(k + q + clk, sigs(1)).output
+    val r = output.subSignal(0)
+    val s = output.subSignal(1)
+    NAND(and3outp1 + s, r).output
+    NAND(and3outp2 + r, s).output
+    val a = NAND(r + nclk, sigs(1)).output
+    val b = NAND(s + nclk, sigs(1)).output
+    NAND(a + nq, q)
+    NAND(b + q, nq)
     return output
 }

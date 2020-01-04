@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
+    testImplementation("junit:junit:4.13")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
 }
 
 tasks {
