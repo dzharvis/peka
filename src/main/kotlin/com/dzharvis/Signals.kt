@@ -42,6 +42,7 @@ typealias Signals = List<Signal>
 fun Signals.subSignal(range: IntRange) = this.slice(range)
 fun Signals.subSignal(range: Int) = this.slice(range..range)
 fun Signals.subscribe(gate: Gate) = this.forEach { it.subscribe(gate) }
+fun Signals.forceUpdate(vararg value: Boolean) = value.forEachIndexed { i, s -> this[i].forceUpdate(s) }
 fun List<Boolean>.asSig() = this.map { it.sig() }
 fun Boolean.sig() = Signal(this)
 

@@ -7,6 +7,110 @@ import org.junit.jupiter.api.Assertions.*
 class GatesKtTest {
 
     @Test
+    fun `register test`() {
+        val clk = sigs(1)
+        val load = sigs(1)
+        val data = sigs(8)
+        val dataOut = sigs(8)
+        register(clk + load + data, dataOut)
+        LED(dataOut)
+
+        pushClk(clk)
+        data.forceUpdate(false, false, false, false, false, false, false, false)
+        load.forceUpdate(true)
+        pushClk(clk)
+        load.forceUpdate(false)
+        pushClk(clk)
+
+        assertEquals(listOf(false, false, false, false, false, false, false, false), dataOut.map { it.signal })
+
+        pushClk(clk)
+        pushClk(clk)
+
+        data.forceUpdate(false, false, true, false, false, false, true, false)
+        load.forceUpdate(true)
+        pushClk(clk)
+        load.forceUpdate(false)
+        pushClk(clk)
+        assertEquals(listOf(false, false, true, false, false, false, true, false), dataOut.map { it.signal })
+    }
+
+    @Test
+    fun `sync counter with enable`() {
+        val clk = sigs(1)
+        val load = sigs(1)
+        val clear = sigs(1)
+        val enable = sigs(1)
+        val dataIn = sigs(4)
+        val dataOut = sigs(4)
+        syncCounterWithEnable(clear + load + enable + clk + dataIn, dataOut)
+
+        LED(dataOut)
+
+        clear.forceUpdate(true)
+        pushClk(clk)
+
+        val q4Dbg = ST_DBG(dataOut.subSignal(3))
+        val q3Dbg = ST_DBG(dataOut.subSignal(2))
+        val q2Dbg = ST_DBG(dataOut.subSignal(1))
+        val q1Dbg = ST_DBG(dataOut.subSignal(0))
+
+        enable.forceUpdate(true)
+        load.forceUpdate(false)
+        clear.forceUpdate(false)
+        for (i in 1..16) {
+            pushClk(clk)
+        }
+
+        clear.forceUpdate(true)
+        pushClk(clk)
+
+        assertEquals(listOf(true, false), q4Dbg.states)
+        assertEquals(listOf(true, false, true, false), q3Dbg.states)
+        assertEquals(listOf(true, false, true, false, true, false, true, false), q2Dbg.states)
+        assertEquals(
+            listOf(
+                true, false, true, false, true, false, true, false,
+                true, false, true, false, true, false, true, false
+            ), q1Dbg.states
+        )
+
+        q1Dbg.reset()
+        q2Dbg.reset()
+        q3Dbg.reset()
+        q4Dbg.reset()
+
+        dataIn.forceUpdate(true, false, true, false)
+
+        enable.forceUpdate(false)
+        clear.forceUpdate(false)
+        load.forceUpdate(true)
+        pushClk(clk)
+
+        assertEquals(listOf(true, false, true, false), dataOut.map { it.signal })
+
+
+        enable.forceUpdate(true)
+        clear.forceUpdate(false)
+        load.forceUpdate(false)
+        pushClk(clk)
+        pushClk(clk)
+        pushClk(clk)
+
+        assertEquals(listOf(false, false, false, true), dataOut.map { it.signal })
+
+        clear.forceUpdate(true)
+        pushClk(clk)
+
+        assertEquals(listOf(false, false, false, false), dataOut.map { it.signal })
+
+        assertEquals(listOf(true, false), q4Dbg.states)
+        assertEquals(listOf(true, false), q3Dbg.states)
+        assertEquals(listOf(true, false), q2Dbg.states)
+        assertEquals(listOf(true, false, true, false), q1Dbg.states)
+    }
+
+    @Test
     fun counter() {
         val clk = sigs(1)
         val cnt = sigs(4)
@@ -17,6 +121,7 @@ class GatesKtTest {
         val q2Dbg = ST_DBG(cnt.subSignal(1))
         val q1Dbg = ST_DBG(cnt.subSignal(0))
 
+        LED(cnt)
         pushClk(clk)
         assertEquals(listOf(false, false, false, false), cnt.map { it.signal }.reversed())
 
@@ -74,8 +179,8 @@ class GatesKtTest {
         val nqDbg = ST_DBG(nq)
         //</init>-------------------------------------
         // test state latch
-        j[0].forceUpdate(true)
-        k[0].forceUpdate(false)
+        j.forceUpdate(true)
+        k.forceUpdate(false)
         pushClk(clk)
         assertEquals(true, q[0].signal)
         qDbg.reset()
@@ -93,8 +198,8 @@ class GatesKtTest {
         assertEquals(listOf<Boolean>(), nqDbg.states)
         //--------------------------------------
         // test state latch
-        j[0].forceUpdate(false)
-        k[0].forceUpdate(true)
+        j.forceUpdate(false)
+        k.forceUpdate(true)
         pushClk(clk)
         assertEquals(listOf(false), qDbg.states)
         assertEquals(listOf(true), nqDbg.states)
@@ -109,8 +214,8 @@ class GatesKtTest {
         assertEquals(listOf(true), nqDbg.states)
         //---------------------------------------
         // test state switching
-        j[0].forceUpdate(true)
-        k[0].forceUpdate(true)
+        j.forceUpdate(true)
+        k.forceUpdate(true)
         pushClk(clk)
         assertEquals(listOf(false, true), qDbg.states)
         assertEquals(listOf(true, false), nqDbg.states)
@@ -124,8 +229,9 @@ class GatesKtTest {
     }
 
     private fun pushClk(clcIn: List<Signal>) {
-        clcIn[0].forceUpdate(true)
-        clcIn[0].forceUpdate(false)
+        clcIn.forceUpdate(true)
+        clcIn.forceUpdate(false)
+        println("---")
     }
 
 }
