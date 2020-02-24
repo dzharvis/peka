@@ -1,5 +1,7 @@
 package com.dzharvis
 
+import kotlin.math.pow
+
 // memory
 // 2 registers, instruct register
 // ALU
@@ -143,6 +145,14 @@ fun syncCounterWithEnable(input: Signals, output: Signals) {
     flipFlop(and1Out + carry3 + clear + input.ss(7), output.ss(3) + carry4)
 }
 
+fun andn(input: Signals, output: Signals, size: Int) {
+    var carry = input.ss(0)
+    for (i in 1 until (size - 1)) {
+        carry = AND(carry + input.ss(i), sig(1)).output
+    }
+    AND(carry + input.ss(size - 1), output)
+}
+
 fun register(input: Signals, output: Signals) {
     val (clk, load, data) = input.destr(0, 1, 2..9)
     val enable = AND(clk + load, sig(1)).output
@@ -152,6 +162,20 @@ fun register(input: Signals, output: Signals) {
     }
 }
 
-fun decoder(input: Signals, output: Signals) {
+fun decoder(input: Signals, output: Signals, size: Int) {
+    val (en, inp) = input.destr(0, 1..size)
+    val notInp = (0 until size).map { i ->
+        NOT(inp.ss(i), sig(1)).output[0]
+    }
 
+    val numOutputs: Int = size.toDouble().pow(2.0).toInt()
+    val counter = nBitBinaryCounterSim(size)
+
+    for (i in 0 until numOutputs) {
+        val pinsState = counter()
+        val andInputs = pinsState
+            .mapIndexed { i, st -> if (st) inp.ss(i) else notInp.ss(i) }
+            .flatten()
+        andn(andInputs + en, output.ss(i), size + 1)
+    }
 }

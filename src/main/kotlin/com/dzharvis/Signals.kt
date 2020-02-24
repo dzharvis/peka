@@ -72,6 +72,7 @@ fun Signals.subscribe(gate: Gate) = this.forEach { it.subscribe(gate) }
 fun Signals.forceUpdate(vararg value: Boolean) = value.forEachIndexed { i, s -> this[i].forceUpdate(s) }
 fun List<Boolean>.asSig() = this.map { it.sig() }
 fun Boolean.sig() = Signal(this)
+fun Signals.asBools() = this.map { it.signal }
 
 typealias SignalIndex = MutableMap<String, Signal>
 

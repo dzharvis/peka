@@ -213,6 +213,82 @@ class GatesKtTest {
         //---------------------------------------
     }
 
+    @Test
+    fun `andn test`() {
+        val (inp, outp) = sigs(4, 1)
+        andn(inp, outp, 4)
+        inp.forceUpdate(true, false, false, false)
+        assertEquals(false, outp[0].signal)
+        inp.forceUpdate(true, false, true, false)
+        assertEquals(false, outp[0].signal)
+        inp.forceUpdate(true, true, true, false)
+        assertEquals(false, outp[0].signal)
+
+        inp.forceUpdate(true, true, true, true)
+        assertEquals(true, outp[0].signal)
+    }
+
+    @Test
+    fun `decoder test`() {
+        val (inp, outp) = sigs(5, 16)
+        decoder(inp, outp, 4)
+        inp.forceUpdate(true, false, false, false, false)
+        assertEquals(
+            listOf(
+                true, false, false, false,
+                false, false, false, false,
+                false, false, false, false,
+                false, false, false, false
+            ),
+            outp.asBools()
+        )
+
+
+        inp.forceUpdate(true, true, false, false, false)
+        assertEquals(
+            listOf(
+                false, true, false, false,
+                false, false, false, false,
+                false, false, false, false,
+                false, false, false, false
+            ),
+            outp.asBools()
+        )
+
+        inp.forceUpdate(true, false, false, false, true)
+        assertEquals(
+            listOf(
+                false, false, false, false,
+                false, false, false, false,
+                true, false, false, false,
+                false, false, false, false
+            ),
+            outp.asBools()
+        )
+
+        inp.forceUpdate(true, true, true, true, true)
+        assertEquals(
+            listOf(
+                false, false, false, false,
+                false, false, false, false,
+                false, false, false, false,
+                false, false, false, true
+            ),
+            outp.asBools()
+        )
+
+        inp.forceUpdate(false, true, true, true, true)
+        assertEquals(
+            listOf(
+                false, false, false, false,
+                false, false, false, false,
+                false, false, false, false,
+                false, false, false, false
+            ),
+            outp.asBools()
+        )
+    }
+
     private fun pushClk(clcIn: List<Signal>) {
         clcIn.forceUpdate(true)
         clcIn.forceUpdate(false)
