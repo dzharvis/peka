@@ -1,17 +1,13 @@
 package com.dzharvis
 
 import org.junit.Test
-
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class GatesKtTest {
 
     @Test
     fun `register test`() {
-        val clk = sigs(1)
-        val load = sigs(1)
-        val data = sigs(8)
-        val dataOut = sigs(8)
+        val (clk, load, data, dataOut) = sigs(1, 1, 8, 8)
         register(clk + load + data, dataOut)
         LED(dataOut)
 
@@ -37,12 +33,7 @@ class GatesKtTest {
 
     @Test
     fun `sync counter with enable`() {
-        val clk = sigs(1)
-        val load = sigs(1)
-        val clear = sigs(1)
-        val enable = sigs(1)
-        val dataIn = sigs(4)
-        val dataOut = sigs(4)
+        val (clk, load, clear, enable, dataIn, dataOut) = sigs(1, 1, 1, 1, 4, 4)
         syncCounterWithEnable(clear + load + enable + clk + dataIn, dataOut)
 
         LED(dataOut)
@@ -50,10 +41,10 @@ class GatesKtTest {
         clear.forceUpdate(true)
         pushClk(clk)
 
-        val q4Dbg = ST_DBG(dataOut.subSignal(3))
-        val q3Dbg = ST_DBG(dataOut.subSignal(2))
-        val q2Dbg = ST_DBG(dataOut.subSignal(1))
-        val q1Dbg = ST_DBG(dataOut.subSignal(0))
+        val q4Dbg = ST_DBG(dataOut.ss(3))
+        val q3Dbg = ST_DBG(dataOut.ss(2))
+        val q2Dbg = ST_DBG(dataOut.ss(1))
+        val q1Dbg = ST_DBG(dataOut.ss(0))
 
         enable.forceUpdate(true)
         load.forceUpdate(false)
@@ -112,14 +103,13 @@ class GatesKtTest {
 
     @Test
     fun counter() {
-        val clk = sigs(1)
-        val cnt = sigs(4)
+        val (clk, cnt) = sigs(1, 4)
         counter(clk, cnt)
 
-        val q4Dbg = ST_DBG(cnt.subSignal(3))
-        val q3Dbg = ST_DBG(cnt.subSignal(2))
-        val q2Dbg = ST_DBG(cnt.subSignal(1))
-        val q1Dbg = ST_DBG(cnt.subSignal(0))
+        val q4Dbg = ST_DBG(cnt.ss(3))
+        val q3Dbg = ST_DBG(cnt.ss(2))
+        val q2Dbg = ST_DBG(cnt.ss(1))
+        val q1Dbg = ST_DBG(cnt.ss(0))
 
         LED(cnt)
         pushClk(clk)
@@ -167,12 +157,7 @@ class GatesKtTest {
 
     @Test
     fun `master-slave JK FlipFlop`() {
-        val j = sigs(1)
-        val k = sigs(1)
-        val q = sigs(1)
-        val nq = sigs(1)
-
-        val clk = sigs(1)
+        val (j, k, q, nq, clk) = sigs(1, 1, 1, 1, 1)
 
         msJKFlipFlop(j + k + clk, q + nq)
         val qDbg = ST_DBG(q)

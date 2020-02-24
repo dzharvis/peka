@@ -1,15 +1,12 @@
 package com.dzharvis
 
 fun main() {
-    val j = sigs(1)
-    val k = sigs(1)
-    val q = sigs(1)
-    val nq = sigs(1)
+    val (j, k, q, nq) = sigs(1, 1, 1, 1)
 
     val index: SignalIndex = mutableMapOf()
     manualClock(index)
-    val clcIn = index.extract("clcIn").subSignal(0)
-    val clk = index.extract("clcOut").subSignal(0)
+    val clcIn = index.extract("clcIn").ss(0)
+    val clk = index.extract("clcOut").ss(0)
 //    LED(clk, "clock")
     LED(q, "Q")
 //    LED(nq, "nQ")

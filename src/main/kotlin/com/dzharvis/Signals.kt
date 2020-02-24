@@ -2,7 +2,8 @@ package com.dzharvis
 
 import java.util.*
 
-fun sigs(size: Int): Signals = generateSequence { false.sig() }.take(size).toList()
+fun sig(size: Int): Signals = generateSequence { false.sig() }.take(size).toList()
+fun sigs(vararg size: Int): List<Signals> = size.map { generateSequence { false.sig() }.take(it).toList() }
 
 class Signal(var signal: Boolean) {
     private val dependentGates = mutableSetOf<Gate>()
@@ -37,10 +38,36 @@ class Signal(var signal: Boolean) {
     }
 }
 
+class Destructable(
+    val signals: Signals,
+    val ranges: List<IntRange>
+) {
+    operator fun component1() = signals.ss(ranges[0])
+    operator fun component2() = signals.ss(ranges[1])
+    operator fun component3() = signals.ss(ranges[2])
+    operator fun component4() = signals.ss(ranges[3])
+    operator fun component5() = signals.ss(ranges[4])
+    operator fun component6() = signals.ss(ranges[5])
+    operator fun component7() = signals.ss(ranges[6])
+    operator fun component8() = signals.ss(ranges[7])
+    operator fun component9() = signals.ss(ranges[8])
+    operator fun component10() = signals.ss(ranges[9])
+}
+
+operator fun List<Signals>.component6() = this[5]
+
 typealias Signals = List<Signal>
 
-fun Signals.subSignal(range: IntRange) = this.slice(range)
-fun Signals.subSignal(range: Int) = this.slice(range..range)
+fun Signals.ss(range: IntRange) = this.slice(range)
+fun Signals.ss(range: Int) = this.slice(range..range)
+fun Signals.destr(vararg ranges: Any) = Destructable(this, ranges.map {
+    when (it) {
+        is Int -> IntRange(it, it)
+        is IntRange -> it
+        else -> throw IllegalArgumentException("oops")
+    }
+})
+
 fun Signals.subscribe(gate: Gate) = this.forEach { it.subscribe(gate) }
 fun Signals.forceUpdate(vararg value: Boolean) = value.forEachIndexed { i, s -> this[i].forceUpdate(s) }
 fun List<Boolean>.asSig() = this.map { it.sig() }
@@ -52,3 +79,4 @@ fun SignalIndex.extract(vararg names: String): Signals = names.map {
     this.putIfAbsent(it, Signal(false))
     this[it]!!
 }
+

@@ -66,8 +66,8 @@ class XOR(val input: Signals, val output: Signals) : Gate(input) {
 }
 
 class TriStateGate(val input: Signals, val output: Signals) : Gate(input) {
-    private val inp = input.subSignal(0)[0]
-    private val en = input.subSignal(1)[0]
+    private val inp = input.ss(0)[0]
+    private val en = input.ss(1)[0]
     override fun mutateOutput(): Set<Gate> {
         return if (en.signal) {
             output[0].update(inp.signal)
