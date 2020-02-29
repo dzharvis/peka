@@ -6,6 +6,31 @@ import org.junit.jupiter.api.Assertions.assertEquals
 class GatesKtTest {
 
     @Test
+    fun `register tri state test`() {
+        val (wr, rd, data, dataOut) = sigs(1, 1, 8, 8)
+        register8BitTriState(wr + rd + data, dataOut)
+        LED(dataOut)
+
+        data.forceUpdate(false, false, false, false, false, false, false, false)
+        wr.forceUpdate(true)
+        wr.forceUpdate(false)
+
+        assertEquals(listOf(false, false, false, false, false, false, false, false), dataOut.map { it.signal })
+        rd.forceUpdate(true)
+        assertEquals(listOf(false, false, false, false, false, false, false, false), dataOut.map { it.signal })
+        rd.forceUpdate(false)
+
+
+        data.forceUpdate(false, false, true, false, false, false, true, false)
+        wr.forceUpdate(true)
+        wr.forceUpdate(false)
+        rd.forceUpdate(true)
+        assertEquals(listOf(false, false, true, false, false, false, true, false), dataOut.map { it.signal })
+        rd.forceUpdate(false)
+        assertEquals(listOf(false, false, true, false, false, false, true, false), dataOut.map { it.signal })
+    }
+
+    @Test
     fun `register test`() {
         val (clk, load, data, dataOut) = sigs(1, 1, 8, 8)
         register(clk + load + data, dataOut)
@@ -287,6 +312,66 @@ class GatesKtTest {
             ),
             outp.asBools()
         )
+    }
+
+    @Test
+    fun `memory test`() {
+        val (wr, rd, addr, bus) = sigs(1, 1, 4, 8)
+        memory8Bit(wr + rd + addr + bus, bus, 4)
+
+        rd.forceUpdate(false)
+        bus.forceUpdate(true, false, true, false, true, false, true, false)
+        addr.forceUpdate(false, true, false, false)
+        wr.forceUpdate(true)
+
+        wr.forceUpdate(false)
+        rd.forceUpdate(false)
+        bus.forceUpdate(false, false, false, false, false, false, false, false)
+
+        rd.forceUpdate(true)
+
+        assertEquals(
+            listOf(true, false, true, false, true, false, true, false),
+            bus.asBools()
+        )
+
+        addr.forceUpdate(false, false, false, false)
+
+        assertEquals(
+            listOf(false, false, false, false, false, false, false, false),
+            bus.asBools()
+        )
+
+        addr.forceUpdate(false, true, false, false)
+        assertEquals(
+            listOf(true, false, true, false, true, false, true, false),
+            bus.asBools()
+        )
+
+        rd.forceUpdate(false)
+        bus.forceUpdate(false, false, false, false, false, false, false, false)
+        addr.forceUpdate(false, false, false, false)
+        assertEquals(
+            listOf(false, false, false, false, false, false, false, false),
+            bus.asBools()
+        )
+        addr.forceUpdate(false, true, false, false)
+        assertEquals(
+            listOf(false, false, false, false, false, false, false, false),
+            bus.asBools()
+        )
+
+        bus.forceUpdate(false, true, true, false, false, false, false, false)
+        addr.forceUpdate(false, true, false, false)
+        wr.forceUpdate(true)
+        wr.forceUpdate(false)
+        bus.forceUpdate(false, false, false, false, false, false, false, false)
+        rd.forceUpdate(true)
+        assertEquals(
+            listOf(false, true, true, false, false, false, false, false),
+            bus.asBools()
+        )
+
     }
 
     private fun pushClk(clcIn: List<Signal>) {

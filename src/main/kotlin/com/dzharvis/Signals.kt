@@ -60,13 +60,20 @@ typealias Signals = List<Signal>
 
 fun Signals.ss(range: IntRange) = this.slice(range)
 fun Signals.ss(range: Int) = this.slice(range..range)
-fun Signals.destr(vararg ranges: Any) = Destructable(this, ranges.map {
-    when (it) {
-        is Int -> IntRange(it, it)
-        is IntRange -> it
-        else -> throw IllegalArgumentException("oops")
+
+fun Signals.bySize(vararg ranges: Int): Destructable {
+    val ranges = ranges.fold<List<IntRange>>(listOf()) { acc, i ->
+        if (acc.isEmpty()) {
+            listOf(0 until i)
+        } else {
+            acc.last().last.let { end ->
+                val nextRange = (end + 1) until (end + 1 + i)
+                acc.plus(listOf(nextRange))
+            }
+        }
     }
-})
+    return Destructable(this, ranges)
+}
 
 fun Signals.subscribe(gate: Gate) = this.forEach { it.subscribe(gate) }
 fun Signals.forceUpdate(vararg value: Boolean) = value.forEachIndexed { i, s -> this[i].forceUpdate(s) }

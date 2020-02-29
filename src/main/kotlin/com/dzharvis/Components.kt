@@ -59,7 +59,7 @@ fun dFlipFlop(input: Signals, output: Signals): Signals {
 }
 
 fun msJKFlipFlop(input: Signals, output: Signals): Signals {
-    val (j, k) = input.destr(0, 1)
+    val (j, k) = input.bySize(1, 1)
     val clk_ = NOT(input.ss(2), sig(1)).output
     val clk = pulser(clk_, sig(1))
     val nclk = NOT(clk, sig(1)).output
@@ -114,7 +114,7 @@ fun counter(input: Signals, output: Signals) {
 }
 
 fun syncCounterWithEnable(input: Signals, output: Signals) {
-    val (clear, load, enable, clk) = input.destr(0, 1, 2, 3)
+    val (clear, load, enable, clk) = input.bySize(1, 1, 1, 1)
     val nclear = NOT(clear, sig(1)).output
     val nload = NOT(load, sig(1)).output
 
@@ -122,7 +122,7 @@ fun syncCounterWithEnable(input: Signals, output: Signals) {
     val and2Out = AND3(nclear + nload + enable, sig(1)).output
 
     fun flipFlop(input: Signals, output: Signals) {
-        val (l, en, cl, data) = input.destr(0, 1, 2, 3)
+        val (l, en, cl, data) = input.bySize(1,1,1,1)
         val nData = NOT(data, sig(1)).output
 
         val and1 = AND(l + data, sig(1)).output
@@ -154,7 +154,7 @@ fun andn(input: Signals, output: Signals, size: Int) {
 }
 
 fun register(input: Signals, output: Signals) {
-    val (clk, load, data) = input.destr(0, 1, 2..9)
+    val (clk, load, data) = input.bySize(1, 1, 8)
     val enable = AND(clk + load, sig(1)).output
 
     for (i in 0..7) {
@@ -162,13 +162,22 @@ fun register(input: Signals, output: Signals) {
     }
 }
 
+fun register8BitTriState(input: Signals, output: Signals) {
+    val (wr, rd, input) = input.bySize(1, 1, 8)
+    for (i in 0..7) {
+        val trstIn = sig(1)
+        TriStateGate(trstIn + rd, output.ss(i))
+        dFlipFlop(input.ss(i) + wr, trstIn + sig(1))
+    }
+}
+
 fun decoder(input: Signals, output: Signals, size: Int) {
-    val (en, inp) = input.destr(0, 1..size)
+    val (en, inp) = input.bySize(1, size)
     val notInp = (0 until size).map { i ->
         NOT(inp.ss(i), sig(1)).output[0]
     }
 
-    val numOutputs: Int = size.toDouble().pow(2.0).toInt()
+    val numOutputs: Int = size.powOfTwo()
     val counter = nBitBinaryCounterSim(size)
 
     for (i in 0 until numOutputs) {
@@ -179,3 +188,21 @@ fun decoder(input: Signals, output: Signals, size: Int) {
         andn(andInputs + en, output.ss(i), size + 1)
     }
 }
+
+// input and output is the same here as this is a bus
+fun memory8Bit(input: Signals, output: Signals, size: Int) {
+    val (wr, rd, addr, input) = input.bySize(1, 1, size, 8)
+    val numCells = size.powOfTwo()
+
+    val writeDecoded = sig(numCells)
+    decoder(wr + addr, writeDecoded, size)
+
+    val readDecoded = sig(numCells)
+    decoder(rd + addr, readDecoded, size)
+
+    for (i in 0 until numCells) {
+        register8BitTriState(writeDecoded.ss(i) + readDecoded.ss(i) + input, input)
+    }
+}
+
+fun Int.powOfTwo() = this.toDouble().pow(2.0).toInt()
