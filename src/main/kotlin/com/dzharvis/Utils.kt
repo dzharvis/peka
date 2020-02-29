@@ -1,28 +1,28 @@
 package com.dzharvis
 
-fun flipper(): () -> List<Boolean> {
-    var state = true
+fun flipper(): () -> List<Int> {
+    var state = 1
     return {
-        state = !state
+        state = state.invLastBit()
         listOf(state)
     }
 }
 
-fun divideByTwo(otherDivider: () -> List<Boolean>): () -> List<Boolean> {
-    var state = false
-    var lastRes = false
+fun divideByTwo(otherDivider: () -> List<Int>): () -> List<Int> {
+    var state = 0
+    var lastRes = 0
     return {
         val currRes = otherDivider()
-        if (!currRes.last() && currRes.last() != lastRes) {
-            state = !state
-            lastRes = false
+        if (currRes.last() == 0 && currRes.last() != lastRes) {
+            state = state.invLastBit()
+            lastRes = 0
         }
         lastRes = currRes.last()
         currRes + state
     }
 }
 
-fun nBitBinaryCounterSim(n: Int): () -> List<Boolean> {
+fun nBitBinaryCounterSim(n: Int): () -> List<Int> {
     return if (n == 1) flipper()
     else divideByTwo(nBitBinaryCounterSim(n - 1))
 }

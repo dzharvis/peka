@@ -2,6 +2,9 @@ package com.dzharvis
 
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import utils.component6
+import utils.ss
+import utils.bits
 
 class GatesKtTest {
 
@@ -11,23 +14,23 @@ class GatesKtTest {
         register8BitTriState(wr + rd + data, dataOut)
         LED(dataOut)
 
-        data.forceUpdate(false, false, false, false, false, false, false, false)
-        wr.forceUpdate(true)
-        wr.forceUpdate(false)
+        data.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
+        wr.forceUpdate(1)
+        wr.forceUpdate(0)
 
-        assertEquals(listOf(false, false, false, false, false, false, false, false), dataOut.map { it.signal })
-        rd.forceUpdate(true)
-        assertEquals(listOf(false, false, false, false, false, false, false, false), dataOut.map { it.signal })
-        rd.forceUpdate(false)
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 0), dataOut.bits())
+        rd.forceUpdate(1)
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 0), dataOut.bits())
+        rd.forceUpdate(0)
 
 
-        data.forceUpdate(false, false, true, false, false, false, true, false)
-        wr.forceUpdate(true)
-        wr.forceUpdate(false)
-        rd.forceUpdate(true)
-        assertEquals(listOf(false, false, true, false, false, false, true, false), dataOut.map { it.signal })
-        rd.forceUpdate(false)
-        assertEquals(listOf(false, false, true, false, false, false, true, false), dataOut.map { it.signal })
+        data.forceUpdate(0, 0, 1, 0, 0, 0, 1, 0)
+        wr.forceUpdate(1)
+        wr.forceUpdate(0)
+        rd.forceUpdate(1)
+        assertEquals(listOf(0, 0, 1, 0, 0, 0, 1, 0), dataOut.bits())
+        rd.forceUpdate(0)
+        assertEquals(listOf(0, 0, 1, 0, 0, 0, 1, 0), dataOut.bits())
     }
 
     @Test
@@ -37,23 +40,23 @@ class GatesKtTest {
         LED(dataOut)
 
         pushClk(clk)
-        data.forceUpdate(false, false, false, false, false, false, false, false)
-        load.forceUpdate(true)
+        data.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
+        load.forceUpdate(1)
         pushClk(clk)
-        load.forceUpdate(false)
-        pushClk(clk)
-
-        assertEquals(listOf(false, false, false, false, false, false, false, false), dataOut.map { it.signal })
-
-        pushClk(clk)
+        load.forceUpdate(0)
         pushClk(clk)
 
-        data.forceUpdate(false, false, true, false, false, false, true, false)
-        load.forceUpdate(true)
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 0), dataOut.bits())
+
         pushClk(clk)
-        load.forceUpdate(false)
         pushClk(clk)
-        assertEquals(listOf(false, false, true, false, false, false, true, false), dataOut.map { it.signal })
+
+        data.forceUpdate(0, 0, 1, 0, 0, 0, 1, 0)
+        load.forceUpdate(1)
+        pushClk(clk)
+        load.forceUpdate(0)
+        pushClk(clk)
+        assertEquals(listOf(0, 0, 1, 0, 0, 0, 1, 0), dataOut.bits())
     }
 
     @Test
@@ -63,7 +66,7 @@ class GatesKtTest {
 
         LED(dataOut)
 
-        clear.forceUpdate(true)
+        clear.forceUpdate(1)
         pushClk(clk)
 
         val q4Dbg = ST_DBG(dataOut.ss(3))
@@ -71,23 +74,23 @@ class GatesKtTest {
         val q2Dbg = ST_DBG(dataOut.ss(1))
         val q1Dbg = ST_DBG(dataOut.ss(0))
 
-        enable.forceUpdate(true)
-        load.forceUpdate(false)
-        clear.forceUpdate(false)
+        enable.forceUpdate(1)
+        load.forceUpdate(0)
+        clear.forceUpdate(0)
         for (i in 1..16) {
             pushClk(clk)
         }
 
-        clear.forceUpdate(true)
+        clear.forceUpdate(1)
         pushClk(clk)
 
-        assertEquals(listOf(true, false), q4Dbg.states)
-        assertEquals(listOf(true, false, true, false), q3Dbg.states)
-        assertEquals(listOf(true, false, true, false, true, false, true, false), q2Dbg.states)
+        assertEquals(listOf(1, 0), q4Dbg.states)
+        assertEquals(listOf(1, 0, 1, 0), q3Dbg.states)
+        assertEquals(listOf(1, 0, 1, 0, 1, 0, 1, 0), q2Dbg.states)
         assertEquals(
             listOf(
-                true, false, true, false, true, false, true, false,
-                true, false, true, false, true, false, true, false
+                1, 0, 1, 0, 1, 0, 1, 0,
+                1, 0, 1, 0, 1, 0, 1, 0
             ), q1Dbg.states
         )
 
@@ -96,34 +99,34 @@ class GatesKtTest {
         q3Dbg.reset()
         q4Dbg.reset()
 
-        dataIn.forceUpdate(true, false, true, false)
+        dataIn.forceUpdate(1, 0, 1, 0)
 
-        enable.forceUpdate(false)
-        clear.forceUpdate(false)
-        load.forceUpdate(true)
+        enable.forceUpdate(0)
+        clear.forceUpdate(0)
+        load.forceUpdate(1)
         pushClk(clk)
 
-        assertEquals(listOf(true, false, true, false), dataOut.map { it.signal })
+        assertEquals(listOf(1, 0, 1, 0), dataOut.bits())
 
 
-        enable.forceUpdate(true)
-        clear.forceUpdate(false)
-        load.forceUpdate(false)
+        enable.forceUpdate(1)
+        clear.forceUpdate(0)
+        load.forceUpdate(0)
         pushClk(clk)
         pushClk(clk)
         pushClk(clk)
 
-        assertEquals(listOf(false, false, false, true), dataOut.map { it.signal })
+        assertEquals(listOf(0, 0, 0, 1), dataOut.bits())
 
-        clear.forceUpdate(true)
+        clear.forceUpdate(1)
         pushClk(clk)
 
-        assertEquals(listOf(false, false, false, false), dataOut.map { it.signal })
+        assertEquals(listOf(0, 0, 0, 0), dataOut.bits())
 
-        assertEquals(listOf(true, false), q4Dbg.states)
-        assertEquals(listOf(true, false), q3Dbg.states)
-        assertEquals(listOf(true, false), q2Dbg.states)
-        assertEquals(listOf(true, false, true, false), q1Dbg.states)
+        assertEquals(listOf(1, 0), q4Dbg.states)
+        assertEquals(listOf(1, 0), q3Dbg.states)
+        assertEquals(listOf(1, 0), q2Dbg.states)
+        assertEquals(listOf(1, 0, 1, 0), q1Dbg.states)
     }
 
     @Test
@@ -138,43 +141,43 @@ class GatesKtTest {
 
         LED(cnt)
         pushClk(clk)
-        assertEquals(listOf(false, false, false, false), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 0, 0, 0), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, false, false, true), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 0, 0, 1), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, false, true, false), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 0, 1, 0), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, false, true, true), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 0, 1, 1), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, true, false, false), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 1, 0, 0), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, true, false, true), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 1, 0, 1), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, true, true, false), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 1, 1, 0), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(false, true, true, true), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(0, 1, 1, 1), cnt.bits().reversed())
 
         pushClk(clk)
-        assertEquals(listOf(true, false, false, false), cnt.map { it.signal }.reversed())
+        assertEquals(listOf(1, 0, 0, 0), cnt.bits().reversed())
 
         for (i in 9..15) {
             pushClk(clk)
         }
-        assertEquals(listOf(true, true, true, true), cnt.map { it.signal }.reversed())
-        assertEquals(listOf(true, false, true), q4Dbg.states)
-        assertEquals(listOf(true, false, true, false, true), q3Dbg.states)
-        assertEquals(listOf(true, false, true, false, true, false, true, false, true), q2Dbg.states)
+        assertEquals(listOf(1, 1, 1, 1), cnt.bits().reversed())
+        assertEquals(listOf(1, 0, 1), q4Dbg.states)
+        assertEquals(listOf(1, 0, 1, 0, 1), q3Dbg.states)
+        assertEquals(listOf(1, 0, 1, 0, 1, 0, 1, 0, 1), q2Dbg.states)
         assertEquals(
             listOf(
-                true, false, true, false, true, false, true, false, true,
-                false, true, false, true, false, true, false, true
+                1, 0, 1, 0, 1, 0, 1, 0, 1,
+                0, 1, 0, 1, 0, 1, 0, 1
             ),
             q1Dbg.states
         )
@@ -189,52 +192,52 @@ class GatesKtTest {
         val nqDbg = ST_DBG(nq)
         //</init>-------------------------------------
         // test state latch
-        j.forceUpdate(true)
-        k.forceUpdate(false)
+        j.forceUpdate(1)
+        k.forceUpdate(0)
         pushClk(clk)
-        assertEquals(true, q[0].signal)
+        assertEquals(1, q[0].signal)
         qDbg.reset()
         nqDbg.reset()
 
         pushClk(clk)
-        assertEquals(true, q[0].signal)
+        assertEquals(1, q[0].signal)
         assertEquals(listOf<Boolean>(), qDbg.states)
         assertEquals(listOf<Boolean>(), nqDbg.states)
 
         pushClk(clk)
         pushClk(clk)
-        assertEquals(true, q[0].signal)
+        assertEquals(1, q[0].signal)
         assertEquals(listOf<Boolean>(), qDbg.states)
         assertEquals(listOf<Boolean>(), nqDbg.states)
         //--------------------------------------
         // test state latch
-        j.forceUpdate(false)
-        k.forceUpdate(true)
+        j.forceUpdate(0)
+        k.forceUpdate(1)
         pushClk(clk)
-        assertEquals(listOf(false), qDbg.states)
-        assertEquals(listOf(true), nqDbg.states)
+        assertEquals(listOf(0), qDbg.states)
+        assertEquals(listOf(1), nqDbg.states)
 
         pushClk(clk)
-        assertEquals(listOf(false), qDbg.states)
-        assertEquals(listOf(true), nqDbg.states)
+        assertEquals(listOf(0), qDbg.states)
+        assertEquals(listOf(1), nqDbg.states)
 
         pushClk(clk)
         pushClk(clk)
-        assertEquals(listOf(false), qDbg.states)
-        assertEquals(listOf(true), nqDbg.states)
+        assertEquals(listOf(0), qDbg.states)
+        assertEquals(listOf(1), nqDbg.states)
         //---------------------------------------
         // test state switching
-        j.forceUpdate(true)
-        k.forceUpdate(true)
+        j.forceUpdate(1)
+        k.forceUpdate(1)
         pushClk(clk)
-        assertEquals(listOf(false, true), qDbg.states)
-        assertEquals(listOf(true, false), nqDbg.states)
+        assertEquals(listOf(0, 1), qDbg.states)
+        assertEquals(listOf(1, 0), nqDbg.states)
 
         pushClk(clk)
         pushClk(clk)
         pushClk(clk)
-        assertEquals(listOf(false, true, false, true, false), qDbg.states)
-        assertEquals(listOf(true, false, true, false, true), nqDbg.states)
+        assertEquals(listOf(0, 1, 0, 1, 0), qDbg.states)
+        assertEquals(listOf(1, 0, 1, 0, 1), nqDbg.states)
         //---------------------------------------
     }
 
@@ -242,75 +245,75 @@ class GatesKtTest {
     fun `andn test`() {
         val (inp, outp) = sigs(4, 1)
         andn(inp, outp, 4)
-        inp.forceUpdate(true, false, false, false)
-        assertEquals(false, outp[0].signal)
-        inp.forceUpdate(true, false, true, false)
-        assertEquals(false, outp[0].signal)
-        inp.forceUpdate(true, true, true, false)
-        assertEquals(false, outp[0].signal)
+        inp.forceUpdate(1, 0, 0, 0)
+        assertEquals(0, outp[0].signal)
+        inp.forceUpdate(1, 0, 1, 0)
+        assertEquals(0, outp[0].signal)
+        inp.forceUpdate(1, 1, 1, 0)
+        assertEquals(0, outp[0].signal)
 
-        inp.forceUpdate(true, true, true, true)
-        assertEquals(true, outp[0].signal)
+        inp.forceUpdate(1, 1, 1, 1)
+        assertEquals(1, outp[0].signal)
     }
 
     @Test
     fun `decoder test`() {
         val (inp, outp) = sigs(5, 16)
         decoder(inp, outp, 4)
-        inp.forceUpdate(true, false, false, false, false)
+        inp.forceUpdate(1, 0, 0, 0, 0)
         assertEquals(
             listOf(
-                true, false, false, false,
-                false, false, false, false,
-                false, false, false, false,
-                false, false, false, false
+                1, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0
             ),
-            outp.asBools()
+            outp.bits()
         )
 
 
-        inp.forceUpdate(true, true, false, false, false)
+        inp.forceUpdate(1, 1, 0, 0, 0)
         assertEquals(
             listOf(
-                false, true, false, false,
-                false, false, false, false,
-                false, false, false, false,
-                false, false, false, false
+                0, 1, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0
             ),
-            outp.asBools()
+            outp.bits()
         )
 
-        inp.forceUpdate(true, false, false, false, true)
+        inp.forceUpdate(1, 0, 0, 0, 1)
         assertEquals(
             listOf(
-                false, false, false, false,
-                false, false, false, false,
-                true, false, false, false,
-                false, false, false, false
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                1, 0, 0, 0,
+                0, 0, 0, 0
             ),
-            outp.asBools()
+            outp.bits()
         )
 
-        inp.forceUpdate(true, true, true, true, true)
+        inp.forceUpdate(1, 1, 1, 1, 1)
         assertEquals(
             listOf(
-                false, false, false, false,
-                false, false, false, false,
-                false, false, false, false,
-                false, false, false, true
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 1
             ),
-            outp.asBools()
+            outp.bits()
         )
 
-        inp.forceUpdate(false, true, true, true, true)
+        inp.forceUpdate(0, 1, 1, 1, 1)
         assertEquals(
             listOf(
-                false, false, false, false,
-                false, false, false, false,
-                false, false, false, false,
-                false, false, false, false
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0
             ),
-            outp.asBools()
+            outp.bits()
         )
     }
 
@@ -319,64 +322,64 @@ class GatesKtTest {
         val (wr, rd, addr, bus) = sigs(1, 1, 4, 8)
         memory8Bit(wr + rd + addr + bus, bus, 4)
 
-        rd.forceUpdate(false)
-        bus.forceUpdate(true, false, true, false, true, false, true, false)
-        addr.forceUpdate(false, true, false, false)
-        wr.forceUpdate(true)
+        rd.forceUpdate(0)
+        bus.forceUpdate(1, 0, 1, 0, 1, 0, 1, 0)
+        addr.forceUpdate(0, 1, 0, 0)
+        wr.forceUpdate(1)
 
-        wr.forceUpdate(false)
-        rd.forceUpdate(false)
-        bus.forceUpdate(false, false, false, false, false, false, false, false)
+        wr.forceUpdate(0)
+        rd.forceUpdate(0)
+        bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
 
-        rd.forceUpdate(true)
+        rd.forceUpdate(1)
 
         assertEquals(
-            listOf(true, false, true, false, true, false, true, false),
-            bus.asBools()
+            listOf(1, 0, 1, 0, 1, 0, 1, 0),
+            bus.bits()
         )
 
-        addr.forceUpdate(false, false, false, false)
+        addr.forceUpdate(0, 0, 0, 0)
 
         assertEquals(
-            listOf(false, false, false, false, false, false, false, false),
-            bus.asBools()
+            listOf(0, 0, 0, 0, 0, 0, 0, 0),
+            bus.bits()
         )
 
-        addr.forceUpdate(false, true, false, false)
+        addr.forceUpdate(0, 1, 0, 0)
         assertEquals(
-            listOf(true, false, true, false, true, false, true, false),
-            bus.asBools()
+            listOf(1, 0, 1, 0, 1, 0, 1, 0),
+            bus.bits()
         )
 
-        rd.forceUpdate(false)
-        bus.forceUpdate(false, false, false, false, false, false, false, false)
-        addr.forceUpdate(false, false, false, false)
+        rd.forceUpdate(0)
+        bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
+        addr.forceUpdate(0, 0, 0, 0)
         assertEquals(
-            listOf(false, false, false, false, false, false, false, false),
-            bus.asBools()
+            listOf(0, 0, 0, 0, 0, 0, 0, 0),
+            bus.bits()
         )
-        addr.forceUpdate(false, true, false, false)
+        addr.forceUpdate(0, 1, 0, 0)
         assertEquals(
-            listOf(false, false, false, false, false, false, false, false),
-            bus.asBools()
+            listOf(0, 0, 0, 0, 0, 0, 0, 0),
+            bus.bits()
         )
 
-        bus.forceUpdate(false, true, true, false, false, false, false, false)
-        addr.forceUpdate(false, true, false, false)
-        wr.forceUpdate(true)
-        wr.forceUpdate(false)
-        bus.forceUpdate(false, false, false, false, false, false, false, false)
-        rd.forceUpdate(true)
+        bus.forceUpdate(0, 1, 1, 0, 0, 0, 0, 0)
+        addr.forceUpdate(0, 1, 0, 0)
+        wr.forceUpdate(1)
+        wr.forceUpdate(0)
+        bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
+        rd.forceUpdate(1)
         assertEquals(
-            listOf(false, true, true, false, false, false, false, false),
-            bus.asBools()
+            listOf(0, 1, 1, 0, 0, 0, 0, 0),
+            bus.bits()
         )
 
     }
 
     private fun pushClk(clcIn: List<Signal>) {
-        clcIn.forceUpdate(true)
-        clcIn.forceUpdate(false)
+        clcIn.forceUpdate(1)
+        clcIn.forceUpdate(0)
         println("---")
     }
 

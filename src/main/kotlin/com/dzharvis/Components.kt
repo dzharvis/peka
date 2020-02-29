@@ -1,5 +1,7 @@
 package com.dzharvis
 
+import utils.bySize
+import utils.ss
 import kotlin.math.pow
 
 // memory
@@ -79,19 +81,19 @@ fun msJKFlipFlop(input: Signals, output: Signals): Signals {
     return output
 }
 
-fun manualClock(signals: SignalIndex) {
-    val clc = signals.extract("clcIn")
-    val clcOut = signals.extract("clcOut")
-    pulser(clc, clcOut)
-}
+//fun manualClock(signals: SignalIndex) {
+//    val clc = signals.extract("clcIn")
+//    val clcOut = signals.extract("clcOut")
+//    pulser(clc, clcOut)
+//}
 
 fun manualClock(input: Signals, output: Signals) {
     pulser(input, output)
 }
 
-fun clock(signals: SignalIndex) {
-    TODO()
-}
+//fun clock(signals: SignalIndex) {
+//    TODO()
+//}
 
 fun counter(input: Signals, output: Signals) {
     val clk = input
@@ -183,7 +185,7 @@ fun decoder(input: Signals, output: Signals, size: Int) {
     for (i in 0 until numOutputs) {
         val pinsState = counter()
         val andInputs = pinsState
-            .mapIndexed { i, st -> if (st) inp.ss(i) else notInp.ss(i) }
+            .mapIndexed { i, st -> if (st == 1) inp.ss(i) else notInp.ss(i) }
             .flatten()
         andn(andInputs + en, output.ss(i), size + 1)
     }
