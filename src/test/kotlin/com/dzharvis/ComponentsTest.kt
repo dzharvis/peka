@@ -1,12 +1,11 @@
 package com.dzharvis
 
+import com.dzharvis.components.*
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
-import utils.component6
-import utils.ss
-import utils.bits
+import utils.*
 
-class GatesKtTest {
+class ComponentsTest {
 
     @Test
     fun `register tri state test`() {
@@ -373,6 +372,107 @@ class GatesKtTest {
         assertEquals(
             listOf(0, 1, 1, 0, 0, 0, 0, 0),
             bus.bits()
+        )
+
+    }
+
+    @Test
+    fun `full adder`() {
+        val (c0, a, b, outp) = sigs(1, 8, 8, 9)
+
+        fullAdder8(c0 + a + b, outp)
+
+        c0.forceUpdate(0)
+        a.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+        b.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 1, 0).reversed(), outp.bits())
+
+        c0.forceUpdate(1)
+        a.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+        b.forceUpdate(*listOf(1, 1, 1, 1, 1, 1, 1, 0).reversed().toIntArray())
+
+        assertEquals(listOf(1, 0, 0, 0, 0, 0, 0, 0, 0).reversed(), outp.bits())
+    }
+
+    @Test
+    fun `alu`() {
+        val (sub, a, b, outp) = sigs(1, 8, 8, 9)
+        alu(sub + a + b, outp)
+
+        sub.forceUpdate(0)
+        a.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+        b.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 1, 0).reversed(), outp.bits())
+
+        sub.forceUpdate(1)
+        assertEquals(listOf(1, 0, 0, 0, 0, 0, 0, 0, 0).reversed(), outp.bits())
+    }
+
+    @Test
+    fun `memory init test`() {
+        val (wr, rd, addr, bus) = sigs(1, 1, 4, 8)
+        memory8Bit(wr + rd + addr + bus, bus, 4)
+
+        val inpTable = listOf(
+            listOf(0, 0, 0, 0),
+            listOf(0, 0, 0, 1),
+            listOf(0, 0, 1, 0),
+            listOf(0, 0, 1, 1)
+        )
+
+        val outTable = listOf(
+            listOf(0, 0, 0, 0, 1, 1, 1, 1),
+            listOf(0, 0, 0, 0, 1, 0, 1, 0),
+            listOf(0, 1, 0, 1, 0, 0, 0, 0),
+            listOf(0, 1, 0, 1, 0, 0, 0, 1)
+        )
+
+        initMemory(wr + rd + addr + bus, inpTable, outTable)
+
+        rd.forceUpdate(1)
+
+        addr.forceUpdate(0, 0, 0, 0)
+        assertEquals(listOf(0, 0, 0, 0, 1, 1, 1, 1), bus.bits())
+
+        addr.forceUpdate(0, 0, 1, 1)
+        assertEquals(listOf(0, 1, 0, 1, 0, 0, 0, 1), bus.bits())
+    }
+
+    @Test
+    fun `controller test`() {
+        val (clk, instr, outp) = sigs(1, 8, 16)
+        controller(clk + instr, outp)
+
+        instr.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+
+        assertEquals(
+            listOf(0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+            outp.bits()
+        )
+
+        pushClk(clk)
+        assertEquals(
+            listOf(0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0),
+            outp.bits()
+        )
+
+        pushClk(clk)
+        assertEquals(
+            listOf(0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            outp.bits()
+        )
+
+        pushClk(clk)
+        assertEquals(
+            listOf(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            outp.bits()
+        )
+
+        pushClk(clk)
+        assertEquals(
+            listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            outp.bits()
         )
 
     }

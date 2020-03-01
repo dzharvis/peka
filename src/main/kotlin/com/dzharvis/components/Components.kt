@@ -1,16 +1,6 @@
-package com.dzharvis
+package com.dzharvis.components
 
-import utils.bySize
-import utils.ss
-import kotlin.math.pow
-
-// memory
-// 2 registers, instruct register
-// ALU
-// clock
-// controller
-// counter
-
+import utils.*
 
 fun fullAdder(input: Signals, output: Signals): Signals {
     val carry = input[2]
@@ -23,10 +13,18 @@ fun fullAdder(input: Signals, output: Signals): Signals {
 }
 
 fun fullAdder4(input: Signals, output: Signals): Signals {
-    val (s1, c1) = fullAdder(input.ss(0..2), output.ss(0) + sig(1))
-    val (s2, c2) = fullAdder(input.ss(3..4) + c1, output.ss(1) + sig(1))
-    val (s3, c3) = fullAdder(input.ss(5..6) + c2, output.ss(2) + sig(1))
-    val (s4, c4) = fullAdder(input.ss(7..8) + c3, output.ss(3..4))
+    val (c0, a1, a2, a3, a4, b1, b2, b3, b4) = input.bySize(1, 1, 1, 1, 1, 1, 1, 1, 1)
+    val (s1, c1) = fullAdder(a1 + b1 + c0, output.ss(0) + sig(1))
+    val (s2, c2) = fullAdder(a2 + b2 + c1, output.ss(1) + sig(1))
+    val (s3, c3) = fullAdder(a3 + b3 + c2, output.ss(2) + sig(1))
+    val (s4, c4) = fullAdder(a4 + b4 + c3, output.ss(3..4))
+    return output
+}
+
+fun fullAdder8(input: Signals, output: Signals): Signals {
+    val (c0, a1, a2, b1, b2) = input.bySize(1, 4, 4, 4, 4)
+    val (s1, c1) = fullAdder4(c0 + a1 + b1, output.ss(0..3) + sig(1)).bySize(4, 1)
+    val (s2, c2) = fullAdder4(c1 + a2 + b2, output.ss(4..8))
     return output
 }
 
@@ -124,7 +122,7 @@ fun syncCounterWithEnable(input: Signals, output: Signals) {
     val and2Out = AND3(nclear + nload + enable, sig(1)).output
 
     fun flipFlop(input: Signals, output: Signals) {
-        val (l, en, cl, data) = input.bySize(1,1,1,1)
+        val (l, en, cl, data) = input.bySize(1, 1, 1, 1)
         val nData = NOT(data, sig(1)).output
 
         val and1 = AND(l + data, sig(1)).output
@@ -207,4 +205,111 @@ fun memory8Bit(input: Signals, output: Signals, size: Int) {
     }
 }
 
-fun Int.powOfTwo() = this.toDouble().pow(2.0).toInt()
+fun alu(input: Signals, output: Signals) {
+    val (sub, a, b) = input.bySize(1, 8, 8)
+    val xB = b.map { XOR(sub + it, sig(1)).output[0] }
+    fullAdder8(sub + a + xB, output)
+}
+
+fun controller(input: Signals, output: Signals) {
+    // counter
+    val (clk, instr) = input.bySize(1, 4)
+    val clkInv = NOT(clk, sig(1)).output
+    val (clear, load, en, clockSet) = sigs(1, 1, 1, 4)
+
+
+    val subStep = sig(4)
+
+    // memory for instructions decoding
+    val (wrL, rdL) = sigs(1, 1, 4)
+    val (wrR, rdR) = sigs(1, 1)
+//    LED(output, "output")
+    val (outL, outR) = output.bySize(8, 8)
+
+    val memoryIn = subStep + instr
+//    LED(memoryIn, "memory in")
+    memory8Bit(wrL + rdL + memoryIn + outL, outL, 8)
+    memory8Bit(wrR + rdR + memoryIn + outR, outR, 8)
+
+    val inpTable = listOf(
+        // fetch
+        listOf(-1, -1, -1, -1, 0, 0, 0, 0).reversed(),
+        listOf(-1, -1, -1, -1, 0, 0, 0, 1).reversed(),
+        // lda
+        listOf(0, 0, 0, 1, 0, 0, 1, 0).reversed(),
+        listOf(0, 0, 0, 1, 0, 0, 1, 1).reversed(),
+        listOf(0, 0, 0, 1, 0, 1, 0, 0).reversed(),
+        // add
+        listOf(0, 0, 1, 0, 0, 0, 1, 0).reversed(),
+        listOf(0, 0, 1, 0, 0, 0, 1, 1).reversed(),
+        listOf(0, 0, 1, 0, 0, 1, 0, 0).reversed(),
+        // out
+        listOf(1, 1, 1, 0, 0, 0, 1, 0).reversed(),
+        listOf(1, 1, 1, 0, 0, 0, 1, 1).reversed(),
+        listOf(1, 1, 1, 0, 0, 1, 0, 0).reversed()
+    )
+
+    // left part
+    val outTableLeft = listOf(
+        // fetch
+        listOf(0, 1, 0, 0, 0, 0, 0, 0),
+        listOf(0, 0, 0, 1, 0, 1, 0, 0),
+        // lda
+        listOf(0, 1, 0, 0, 1, 0, 0, 0),
+        listOf(0, 0, 0, 1, 0, 0, 1, 0),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        // add
+        listOf(0, 1, 0, 0, 1, 0, 0, 1),
+        listOf(0, 0, 0, 1, 0, 0, 0, 0),
+        listOf(0, 0, 0, 0, 0, 0, 1, 0),
+        // out
+        listOf(0, 0, 0, 0, 0, 0, 0, 1),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0)
+    )
+
+    // right part
+    val outTableRight = listOf(
+        // fetch
+        listOf(0, 0, 0, 0, 0, 0, 1, 0),
+        listOf(0, 0, 0, 0, 0, 1, 0, 0),
+        // lda
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        // add
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        listOf(0, 0, 0, 1, 0, 0, 0, 0),
+        listOf(0, 1, 0, 0, 0, 0, 0, 0),
+        // out
+        listOf(0, 0, 0, 0, 1, 0, 0, 0),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0),
+        listOf(0, 0, 0, 0, 0, 0, 0, 0)
+    )
+    initMemory(wrL + rdL + memoryIn + outL, inpTable, outTableLeft)
+    initMemory(wrR + rdR + memoryIn + outR, inpTable, outTableRight)
+    rdL.forceUpdate(1)
+    rdR.forceUpdate(1)
+
+    println("memory init done-------------")
+
+    val decoderOut = sig(16)
+    decoder(en + subStep, decoderOut, 4)
+    // if step - 5 - reset counter to 0 and start again
+    syncCounterWithEnable(decoderOut.ss(4) + load + en + clkInv + clockSet, subStep)
+//    LED(clkInv, "clkInv")
+//    LED(subStep, "internal clock")
+    //
+    clockSet.forceUpdate(0, 0, 0, 0)
+    load.forceUpdate(1)
+    en.forceUpdate(0)
+    clear.forceUpdate(0)
+    clkInv.forceUpdate(1)
+    clkInv.forceUpdate(0)
+    clkInv.forceUpdate(1)
+    load.forceUpdate(0)
+    en.forceUpdate(1) // always enable
+    println("clock init done-------------")
+
+}
+

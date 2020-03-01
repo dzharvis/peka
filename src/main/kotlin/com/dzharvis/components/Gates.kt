@@ -1,5 +1,6 @@
-package com.dzharvis
+package com.dzharvis.components
 
+import utils.invLastBit
 import utils.ss
 
 
@@ -67,8 +68,9 @@ class XOR(val input: Signals, val output: Signals) : Gate(input) {
     override fun mutateOutput() = output[0].update(input[0].signal xor input[1].signal)
 }
 
-fun Int.invLastBit() = this.inv() and 1
 
+
+// can physically disconnect element from circuit
 class TriStateGate(val input: Signals, val output: Signals) : Gate(input) {
     private val inp = input.ss(0)[0]
     private val en = input.ss(1)[0]

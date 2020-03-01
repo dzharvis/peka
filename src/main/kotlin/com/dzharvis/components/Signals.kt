@@ -1,6 +1,5 @@
-package com.dzharvis
+package com.dzharvis.components
 
-import utils.Destructable
 import utils.sig
 import java.util.*
 
@@ -40,22 +39,8 @@ class Signal(var signal: Int) {
     }
 }
 
-
-
-
 typealias Signals = List<Signal>
-
-
-
-
 fun Signals.subscribe(gate: Gate) = this.forEach { it.subscribe(gate) }
 fun Signals.forceUpdate(vararg value: Int) = value.forEachIndexed { i, s -> this[i].forceUpdate(s) }
-//fun Signals.asBools() = this.map { it.signal }
 
-//typealias SignalIndex = MutableMap<String, Signal>
-//
-//fun SignalIndex.extract(vararg names: String): Signals = names.map {
-//    this.putIfAbsent(it, Signal(0))
-//    this[it]!!
-//}
 
