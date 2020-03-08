@@ -2,6 +2,7 @@ package com.dzharvis
 
 import junit.framework.Assert.assertEquals
 import org.junit.Test
+import utils.binToDec
 import utils.nBitBinaryCounterSim
 import utils.unzip
 
@@ -25,5 +26,13 @@ class UtilsTest {
             listOf(1, 0, 0, 0),
             listOf(1, 0, 0, 1)
         ), unzip)
+    }
+
+    @Test
+    fun `test bin to dec`() {
+        assertEquals(10, binToDec(listOf(0, 1, 0, 1)))
+        assertEquals(0, binToDec(listOf(0, 0, 0, 0)))
+        assertEquals(11, binToDec(listOf(1, 1, 0, 1)))
+        assertEquals(15, binToDec(listOf(1, 1, 1, 1)))
     }
 }

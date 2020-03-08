@@ -2,6 +2,8 @@ package com.dzharvis.peka
 
 import com.dzharvis.components.*
 import com.dzharvis.peka.Controls.*
+import utils.binToDec
+import utils.bits
 import utils.initializeMemory
 import utils.ss
 
@@ -173,6 +175,8 @@ fun initPeka() {
         printLeds()
         println("------- step $i")
     }
+
+    println("Final result: " + binToDec(outpRegDirectOut.bits()))
 }
 
 fun printLeds() = leds.forEach { it.prnt() }

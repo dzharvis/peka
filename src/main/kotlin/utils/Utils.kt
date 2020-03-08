@@ -72,3 +72,11 @@ fun nBitBinaryCounterSim(n: Int): () -> List<Int> {
     else divideByTwo(nBitBinaryCounterSim(n - 1))
 }
 
+fun binToDec(data: List<Int>): Int {
+    var result = 0
+    for(bit in data.reversed()) {
+        result = result or bit
+        result = result shl 1
+    }
+    return result shr 1
+}
