@@ -30,6 +30,6 @@ fun Signals.ss(range: Int) = this.slice(range..range)
 fun Signals.bits() = this.map { it.signal }
 
 fun Int.sig() = Signal(this)
-fun Int.powOfTwo() = this.toDouble().pow(2.0).toInt()
+fun Int.powOfTwo() = 2.0.pow(this).toInt()
 
 fun Int.invLastBit() = this.inv() and 1

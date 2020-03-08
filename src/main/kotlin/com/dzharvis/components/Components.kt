@@ -36,18 +36,10 @@ fun pulser(input: Signals, output: Signals): Signals {
     return and
 }
 
-
-fun infOscilator(input: Signals, output: Signals): Signals {
-    require(input.ss(0) == output.ss(0))
-    { "infinite oscilator requires output to be connected to input" }
-
-    return NOT(input, output).output
-}
-
 // d - 0, en - 1
 fun dFlipFlop(input: Signals, output: Signals): Signals {
-    val d = input.ss(0)
-    val clk = pulser(input.ss(1), sig(1))
+    val (d, en) = input.bySize(1, 1)
+    val clk = pulser(en, sig(1))
     val inv = NOT(d, sig(1)).output
     val and1 = AND(inv + clk, sig(1)).output
     val and2 = AND(d + clk, sig(1)).output
@@ -78,20 +70,6 @@ fun msJKFlipFlop(input: Signals, output: Signals): Signals {
     NAND(b + q, nq)
     return output
 }
-
-//fun manualClock(signals: SignalIndex) {
-//    val clc = signals.extract("clcIn")
-//    val clcOut = signals.extract("clcOut")
-//    pulser(clc, clcOut)
-//}
-
-fun manualClock(input: Signals, output: Signals) {
-    pulser(input, output)
-}
-
-//fun clock(signals: SignalIndex) {
-//    TODO()
-//}
 
 fun counter(input: Signals, output: Signals) {
     val clk = input
@@ -205,6 +183,7 @@ fun memory8Bit(input: Signals, output: Signals, size: Int) {
     }
 }
 
+// currently only add and subtract
 fun alu(input: Signals, output: Signals) {
     val (sub, a, b) = input.bySize(1, 8, 8)
     val xB = b.map { XOR(sub + it, sig(1)).output[0] }
@@ -212,104 +191,93 @@ fun alu(input: Signals, output: Signals) {
 }
 
 fun controller(input: Signals, output: Signals) {
-    // counter
     val (clk, instr) = input.bySize(1, 4)
-    val clkInv = NOT(clk, sig(1)).output
-    val (clear, load, en, clockSet) = sigs(1, 1, 1, 4)
-
-
+    val (load, en, clockSet) = sigs(1, 1, 4)
     val subStep = sig(4)
 
     // memory for instructions decoding
     val (wrL, rdL) = sigs(1, 1, 4)
     val (wrR, rdR) = sigs(1, 1)
-//    LED(output, "output")
     val (outL, outR) = output.bySize(8, 8)
 
     val memoryIn = subStep + instr
-//    LED(memoryIn, "memory in")
+    LED(memoryIn, "memory in")
     memory8Bit(wrL + rdL + memoryIn + outL, outL, 8)
     memory8Bit(wrR + rdR + memoryIn + outR, outR, 8)
 
-    val inpTable = listOf(
-        // fetch
-        listOf(-1, -1, -1, -1, 0, 0, 0, 0).reversed(),
-        listOf(-1, -1, -1, -1, 0, 0, 0, 1).reversed(),
-        // lda
-        listOf(0, 0, 0, 1, 0, 0, 1, 0).reversed(),
-        listOf(0, 0, 0, 1, 0, 0, 1, 1).reversed(),
-        listOf(0, 0, 0, 1, 0, 1, 0, 0).reversed(),
-        // add
-        listOf(0, 0, 1, 0, 0, 0, 1, 0).reversed(),
-        listOf(0, 0, 1, 0, 0, 0, 1, 1).reversed(),
-        listOf(0, 0, 1, 0, 0, 1, 0, 0).reversed(),
-        // out
-        listOf(1, 1, 1, 0, 0, 0, 1, 0).reversed(),
-        listOf(1, 1, 1, 0, 0, 0, 1, 1).reversed(),
-        listOf(1, 1, 1, 0, 0, 1, 0, 0).reversed()
-    )
-
-    // left part
-    val outTableLeft = listOf(
-        // fetch
-        listOf(0, 1, 0, 0, 0, 0, 0, 0),
-        listOf(0, 0, 0, 1, 0, 1, 0, 0),
-        // lda
-        listOf(0, 1, 0, 0, 1, 0, 0, 0),
-        listOf(0, 0, 0, 1, 0, 0, 1, 0),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        // add
-        listOf(0, 1, 0, 0, 1, 0, 0, 1),
-        listOf(0, 0, 0, 1, 0, 0, 0, 0),
-        listOf(0, 0, 0, 0, 0, 0, 1, 0),
-        // out
-        listOf(0, 0, 0, 0, 0, 0, 0, 1),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0)
-    )
-
-    // right part
-    val outTableRight = listOf(
-        // fetch
-        listOf(0, 0, 0, 0, 0, 0, 1, 0),
-        listOf(0, 0, 0, 0, 0, 1, 0, 0),
-        // lda
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        // add
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        listOf(0, 0, 0, 1, 0, 0, 0, 0),
-        listOf(0, 1, 0, 0, 0, 0, 0, 0),
-        // out
-        listOf(0, 0, 0, 0, 1, 0, 0, 0),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0),
-        listOf(0, 0, 0, 0, 0, 0, 0, 0)
-    )
-    initMemory(wrL + rdL + memoryIn + outL, inpTable, outTableLeft)
-    initMemory(wrR + rdR + memoryIn + outR, inpTable, outTableRight)
-    rdL.forceUpdate(1)
-    rdR.forceUpdate(1)
-
+    val memoryInState = memoryIn.remember()
+    initializeMemory(wrL + rdL + memoryIn + outL, controllerInputTable, controllerOutputLeftCell)
+    initializeMemory(wrR + rdR + memoryIn + outR, controllerInputTable, controllerOutputRightCell)
+    memoryIn.forceUpdate(*memoryInState)
     println("memory init done-------------")
 
     val decoderOut = sig(16)
     decoder(en + subStep, decoderOut, 4)
     // if step - 5 - reset counter to 0 and start again
-    syncCounterWithEnable(decoderOut.ss(4) + load + en + clkInv + clockSet, subStep)
-//    LED(clkInv, "clkInv")
-//    LED(subStep, "internal clock")
-    //
-    clockSet.forceUpdate(0, 0, 0, 0)
-    load.forceUpdate(1)
-    en.forceUpdate(0)
-    clear.forceUpdate(0)
-    clkInv.forceUpdate(1)
-    clkInv.forceUpdate(0)
-    clkInv.forceUpdate(1)
+    clkReset = decoderOut.ss(4)
+    syncCounterWithEnable(decoderOut.ss(4) + load + en + clk + clockSet, subStep)
+    LED(subStep, "internal clock")
+    LED(memoryIn, "CONTROLLER IN")
+    clkReset!!.forceUpdate(0)
     load.forceUpdate(0)
     en.forceUpdate(1) // always enable
-    println("clock init done-------------")
 
+    println("clock init done-------------")
+    LED(output, "CONTROLLER OUT")
+    rdL.forceUpdate(1)
+    rdR.forceUpdate(1)
 }
 
+var clkReset:Signals? = null
+
+val controllerInputTable = listOf(
+    // fetch
+    listOf(-1, -1, -1, -1, 0, 0, 0, 0).reversed(),
+    listOf(-1, -1, -1, -1, 0, 0, 0, 1).reversed(),
+    // lda
+    listOf(0, 0, 0, 1, 0, 0, 1, 0).reversed(),
+    listOf(0, 0, 0, 1, 0, 0, 1, 1).reversed(),
+    listOf(0, 0, 0, 1, 0, 1, 0, 0).reversed(),
+    // add
+    listOf(0, 0, 1, 0, 0, 0, 1, 0).reversed(),
+    listOf(0, 0, 1, 0, 0, 0, 1, 1).reversed(),
+    listOf(0, 0, 1, 0, 0, 1, 0, 0).reversed(),
+    // out
+    listOf(1, 1, 1, 0, 0, 0, 1, 0).reversed(),
+    listOf(1, 1, 1, 0, 0, 0, 1, 1).reversed(),
+    listOf(1, 1, 1, 0, 0, 1, 0, 0).reversed()
+)
+val controllerOutputLeftCell = listOf(
+    // fetch
+    listOf(0, 1, 0, 0, 0, 0, 0, 0),
+    listOf(0, 0, 0, 1, 0, 1, 0, 0),
+    // lda
+    listOf(0, 1, 0, 0, 1, 0, 0, 0),
+    listOf(0, 0, 0, 1, 0, 0, 1, 0),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    // add
+    listOf(0, 1, 0, 0, 1, 0, 0, 0),
+    listOf(0, 0, 0, 1, 0, 0, 0, 0),
+    listOf(0, 0, 0, 0, 0, 0, 1, 0),
+    // out
+    listOf(0, 0, 0, 0, 0, 0, 0, 1),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0)
+)
+val controllerOutputRightCell = listOf(
+    // fetch
+    listOf(0, 0, 0, 0, 0, 0, 1, 0),
+    listOf(0, 0, 0, 0, 0, 1, 0, 0),
+    // lda
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    // add
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    listOf(0, 0, 0, 1, 0, 0, 0, 0),
+    listOf(0, 1, 0, 0, 0, 0, 0, 0),
+    // out
+    listOf(0, 0, 0, 0, 1, 0, 0, 0),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0),
+    listOf(0, 0, 0, 0, 0, 0, 0, 0)
+)

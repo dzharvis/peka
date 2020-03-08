@@ -14,7 +14,7 @@ fun unzip(elems: List<Int>): List<List<Int>> {
     }
 }
 
-fun initMemory(input: Signals, inpTable: List<List<Int>>, outTable: List<List<Int>>) {
+fun initializeMemory(input: Signals, inpTable: List<List<Int>>, outTable: List<List<Int>>) {
     require(inpTable.size == outTable.size)
     // -1 means for any input value - which means that we should iterate over each possible value combinations
     val extractedTable = inpTable.zip(outTable).flatMap { (i, o) ->
@@ -24,13 +24,24 @@ fun initMemory(input: Signals, inpTable: List<List<Int>>, outTable: List<List<In
     }
     //
 
-    val (wr, _, address, input) = input.bySize(1, 1, inpTable.first().size, 8)
+    val (wr, rd, address, input) = input.bySize(1, 1, inpTable.first().size, 8)
 
     extractedTable.forEach { (currentAddress, currentValue) ->
         input.forceUpdate(*currentValue.toIntArray())
+        require(input.bits() == currentValue)
         address.forceUpdate(*currentAddress.toIntArray())
         wr.forceUpdate(1)
         wr.forceUpdate(0)
+
+        // check we car read value currently written
+        input.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
+        address.forceUpdate(*generateSequence { 0 }.take(inpTable[0].size).toList().toIntArray())
+        rd.forceUpdate(1)
+        address.forceUpdate(*currentAddress.toIntArray())
+        require(input.bits() == currentValue) {
+            println("Expected ${currentValue}, got ${input.bits()}")
+        }
+        rd.forceUpdate(0)
     }
 }
 
@@ -60,3 +71,4 @@ fun nBitBinaryCounterSim(n: Int): () -> List<Int> {
     return if (n == 1) flipper()
     else divideByTwo(nBitBinaryCounterSim(n - 1))
 }
+

@@ -8,7 +8,7 @@ fun sigs(vararg size: Int): List<Signals> = size.map { generateSequence { 0.sig(
 
 class Signal(var signal: Int) {
     private val dependentGates = mutableSetOf<Gate>()
-    private var isUninitialized: Boolean = true
+    var isUninitialized: Boolean = true
     // trampoline magic to avoid stack overflow in complex schemes
     private fun notifySignalChanged() {
         val dependencies = LinkedList<Gate>()
@@ -40,7 +40,7 @@ class Signal(var signal: Int) {
 }
 
 typealias Signals = List<Signal>
+
 fun Signals.subscribe(gate: Gate) = this.forEach { it.subscribe(gate) }
 fun Signals.forceUpdate(vararg value: Int) = value.forEachIndexed { i, s -> this[i].forceUpdate(s) }
-
-
+fun Signals.remember() = this.map { it.signal }.toIntArray()

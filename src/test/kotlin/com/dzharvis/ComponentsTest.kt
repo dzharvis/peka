@@ -1,6 +1,7 @@
 package com.dzharvis
 
 import com.dzharvis.components.*
+import com.dzharvis.peka.printLeds
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import utils.*
@@ -257,62 +258,26 @@ class ComponentsTest {
 
     @Test
     fun `decoder test`() {
-        val (inp, outp) = sigs(5, 16)
-        decoder(inp, outp, 4)
-        inp.forceUpdate(1, 0, 0, 0, 0)
+        val (inp, outp) = sigs(9, 256)
+        decoder(inp, outp, 8)
+        inp.forceUpdate(1, 0, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(
-            listOf(
-                1, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0
-            ),
+            listOf(1) + generateSequence { 0 }.take(255),
             outp.bits()
         )
 
-
-        inp.forceUpdate(1, 1, 0, 0, 0)
+        inp.forceUpdate(1, 1, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(
-            listOf(
-                0, 1, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0
-            ),
+            (listOf(0, 1) + generateSequence { 0 }.take(254)).toList(),
             outp.bits()
         )
 
-        inp.forceUpdate(1, 0, 0, 0, 1)
+        inp.forceUpdate(1, 1, 1, 1, 1, 1, 1, 1, 1)
+        val l1 = (generateSequence { 0 }.take(255) + listOf(1)).toList()
+        val l2 = outp.bits()
         assertEquals(
-            listOf(
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                1, 0, 0, 0,
-                0, 0, 0, 0
-            ),
-            outp.bits()
-        )
-
-        inp.forceUpdate(1, 1, 1, 1, 1)
-        assertEquals(
-            listOf(
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 1
-            ),
-            outp.bits()
-        )
-
-        inp.forceUpdate(0, 1, 1, 1, 1)
-        assertEquals(
-            listOf(
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0
-            ),
-            outp.bits()
+            l1,
+            l2
         )
     }
 
@@ -411,32 +376,45 @@ class ComponentsTest {
 
     @Test
     fun `memory init test`() {
-        val (wr, rd, addr, bus) = sigs(1, 1, 4, 8)
-        memory8Bit(wr + rd + addr + bus, bus, 4)
+        val (wr, rd, addr, bus) = sigs(1, 1, 8, 8)
+        memory8Bit(wr + rd + addr + bus, bus, 8)
 
         val inpTable = listOf(
-            listOf(0, 0, 0, 0),
-            listOf(0, 0, 0, 1),
-            listOf(0, 0, 1, 0),
-            listOf(0, 0, 1, 1)
+            listOf(0, 0, 0, 0, 0, 0, 0, 0),
+            listOf(0, 0, 0, 0, 0, 0, 0, 1),
+            listOf(0, 0, 0, 0, 0, 0, 1, 0),
+            listOf(0, 0, 0, 0, 0, 0, 1, 1),
+            listOf(0, 0, 0, 0, 0, 1, 0, 0),
+            listOf(0, 0, 0, 0, 0, 1, 0, 1),
+            listOf(0, 0, 0, 0, 0, 1, 1, 0),
+            listOf(0, 0, 0, 0, 0, 1, 1, 1),
+            listOf(0, 0, 0, 0, 1, 0, 0, 0)
         )
 
         val outTable = listOf(
             listOf(0, 0, 0, 0, 1, 1, 1, 1),
             listOf(0, 0, 0, 0, 1, 0, 1, 0),
             listOf(0, 1, 0, 1, 0, 0, 0, 0),
-            listOf(0, 1, 0, 1, 0, 0, 0, 1)
+            listOf(0, 1, 0, 1, 0, 0, 0, 1),
+            listOf(0, 1, 0, 1, 0, 0, 0, 1),
+            listOf(0, 1, 0, 1, 0, 0, 0, 1),
+            listOf(0, 1, 0, 1, 0, 0, 0, 1),
+            listOf(0, 1, 0, 1, 0, 0, 0, 1),
+            listOf(1, 1, 0, 1, 0, 0, 0, 1)
         )
 
-        initMemory(wr + rd + addr + bus, inpTable, outTable)
+        initializeMemory(wr + rd + addr + bus, inpTable, outTable)
 
         rd.forceUpdate(1)
 
-        addr.forceUpdate(0, 0, 0, 0)
+        addr.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(listOf(0, 0, 0, 0, 1, 1, 1, 1), bus.bits())
 
-        addr.forceUpdate(0, 0, 1, 1)
+        addr.forceUpdate(0, 0, 0, 0, 0, 0, 1, 1)
         assertEquals(listOf(0, 1, 0, 1, 0, 0, 0, 1), bus.bits())
+
+        addr.forceUpdate(0, 0, 0, 0, 1, 0, 0, 0)
+        assertEquals(listOf(1, 1, 0, 1, 0, 0, 0, 1), bus.bits())
     }
 
     @Test
@@ -445,36 +423,39 @@ class ComponentsTest {
         controller(clk + instr, outp)
 
         instr.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
-
         assertEquals(
             listOf(0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
             outp.bits()
         )
-
-        pushClk(clk)
+        clk.forceUpdate(1)
+        clk.forceUpdate(0)
+        printLeds()
         assertEquals(
             listOf(0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0),
             outp.bits()
         )
+        clk.forceUpdate(1)
 
-        pushClk(clk)
+        clk.forceUpdate(0)
         assertEquals(
             listOf(0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             outp.bits()
         )
+        clk.forceUpdate(1)
 
-        pushClk(clk)
+        clk.forceUpdate(0)
         assertEquals(
             listOf(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             outp.bits()
         )
+        clk.forceUpdate(1)
 
-        pushClk(clk)
+        clk.forceUpdate(0)
         assertEquals(
             listOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             outp.bits()
         )
-
+        clk.forceUpdate(1)
     }
 
     private fun pushClk(clcIn: List<Signal>) {

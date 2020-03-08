@@ -3,9 +3,14 @@ package com.dzharvis.components
 import utils.invLastBit
 import utils.ss
 
+var counter = 0
 
 abstract class Gate(input: Signals) {
+    val id = ++counter
+    override fun toString() = "$id"
+
     init {
+//        graph.addNode(this.toString())
         this.dependsOn(input)
     }
 
@@ -13,10 +18,32 @@ abstract class Gate(input: Signals) {
     abstract fun mutateOutput(): Set<Gate>
 }
 
+val leds = mutableListOf<LED>()
+
 // for debugging
 class LED(val input: Signals, val name: String = "LED") : Gate(input) {
+    init {
+        leds.add(this)
+    }
+
+    fun prnt() {
+        println("$name:\n    ${input.joinToString("")}")
+    }
+
     override fun mutateOutput(): Set<Gate> {
-        println("$name: ${input.joinToString("")}")
+        // prnt()
+        return emptySet()
+    }
+}
+
+// for debugging
+class TRACING_LED(val input: Signals, val name: String = "LED") : Gate(input) {
+    fun prnt() {
+        println("$name:\n    ${input.joinToString("")}")
+    }
+
+    override fun mutateOutput(): Set<Gate> {
+        prnt()
         return emptySet()
     }
 }
@@ -45,7 +72,8 @@ class AND3(val input: Signals, val output: Signals) : Gate(input) {
 }
 
 class NAND3(val input: Signals, val output: Signals) : Gate(input) {
-    override fun mutateOutput() = output[0].update((input[0].signal and input[1].signal and input[2].signal).invLastBit())
+    override fun mutateOutput() =
+        output[0].update((input[0].signal and input[1].signal and input[2].signal).invLastBit())
 }
 
 class NAND(val input: Signals, val output: Signals) : Gate(input) {
@@ -68,17 +96,13 @@ class XOR(val input: Signals, val output: Signals) : Gate(input) {
     override fun mutateOutput() = output[0].update(input[0].signal xor input[1].signal)
 }
 
-
-
 // can physically disconnect element from circuit
 class TriStateGate(val input: Signals, val output: Signals) : Gate(input) {
     private val inp = input.ss(0)[0]
     private val en = input.ss(1)[0]
-    override fun mutateOutput(): Set<Gate> {
-        return if (en.signal == 1) {
-            output[0].update(inp.signal)
-        } else {
-            emptySet()
-        }
+    override fun mutateOutput(): Set<Gate> = if (en.signal == 1) {
+        output[0].update(inp.signal)
+    } else {
+        emptySet()
     }
 }

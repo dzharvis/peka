@@ -2,6 +2,7 @@ package com.dzharvis.peka
 
 import com.dzharvis.components.*
 import com.dzharvis.peka.Controls.*
+import utils.initializeMemory
 import utils.ss
 
 enum class Controls {
@@ -25,23 +26,13 @@ fun initCounter(clk: Signals, controls: Map<Controls, Signals>, bus: Signals) {
     val ci = controls[CntI]!!
     val ce = controls[CntE]!!
     val counterIn = clear + ci + ce + clk + bus.ss(0..3)
-    val counterDirectOur = sig(8)
+    val counterDirectOur = sig(4)
     syncCounterWithEnable(counterIn, counterDirectOur)
     LED(counterDirectOur, "COUNTER DIRECT OUT")
-    connectToBus(controls[CntO]!!, bus, counterDirectOur)
-
-
-    bus.ss(0..3).forceUpdate(0, 0, 0, 0)
-    ci.forceUpdate(1)
-    ce.forceUpdate(0)
-    clear.forceUpdate(0)
-    clk.forceUpdate(1)
-    clk.forceUpdate(0)
-    clk.forceUpdate(1)
-    ci.forceUpdate(0)
-    ce.forceUpdate(1) // always enable
-
-
+    controls[CntE]!!.forceUpdate(0)
+    controls[CntO]!!.forceUpdate(0)
+    controls[CntCl]!!.forceUpdate(0)
+    connectToBus(controls[CntO]!!, bus.ss(0..3), counterDirectOur)
 }
 
 fun initControlUnit(clk: Signals, controls: Map<Controls, Signals>, instrRegOutput: Signals) {
@@ -50,8 +41,9 @@ fun initControlUnit(clk: Signals, controls: Map<Controls, Signals>, instrRegOutp
             controls[Unused]!! + controls[AluO]!! + controls[Subst]!! + controls[BRegI]!! +
             controls[OutRegI]!! + controls[CntE]!! + controls[CntO]!! + controls[CntCl]!!
     LED(controllerOut, "controller")
-    controller(clk + instrRegOutput.ss(0..3), controllerOut)
+    controller(clk + instrRegOutput.ss(4..7), controllerOut)
 }
+
 fun initAlu(
     controls: Map<Controls, List<Signal>>,
     bus: List<Signal>,
@@ -59,63 +51,90 @@ fun initAlu(
     bRegDirectOut: List<Signal>
 ) {
     val aluDirectOut = sig(8)
+    LED(aluDirectOut, "ALU")
     alu(controls[Subst]!! + aRegDirectOut + bRegDirectOut, aluDirectOut + sig(1))
     connectToBus(controls[AluO]!!, bus, aluDirectOut)
 }
+
+
+val memoryAddress = listOf(
+    listOf(0, 0, 0, 0, 0, 0, 0, 0).reversed(),
+    listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed(),
+    listOf(0, 0, 0, 0, 0, 0, 1, 0).reversed(),
+    listOf(0, 0, 0, 0, 1, 1, 1, 0).reversed(),
+    listOf(0, 0, 0, 0, 1, 1, 1, 1).reversed()
+)
+
+val memoryValue = listOf(
+    listOf(0, 1, 1, 1, 1, 0, 0, 0), // ASM: [LDA 14]
+    listOf(1, 1, 1, 1, 0, 1, 0, 0), // ASM: [ADD 15]
+    listOf(0, 0, 0, 0, 0, 1, 1, 1), // ASM: [OUT]
+    listOf(0, 0, 1, 1, 1, 0, 0, 0), // DATA: [28]
+    listOf(0, 1, 1, 1, 0, 0, 0, 0)  // DATA: [14]
+
+)
+
 fun initMemory(controls: Map<Controls, Signals>, memReg: Signals, bus: Signals) {
     val memDirectOut = sig(8)
-    memory8Bit(controls[MemI]!! + controls[MemO]!! + memReg + bus, memDirectOut, 8)
-    connectToBus(controls[MemO]!!, bus, memDirectOut)
+    val wr = controls[MemI]!!
+    val rd = controls[MemO]!!
+    val memin = wr + rd + memReg + memDirectOut
+    memory8Bit(memin, memDirectOut, 8)
+    val mm = memReg.remember()
+    initializeMemory(memin, memoryAddress, memoryValue)
+    memReg.forceUpdate(*mm)
+    LED(memReg, "RAM ADDR")
+    LED(memDirectOut, "RAM OUT")
+    connectToBus(rd, bus, memDirectOut)
 }
+
 // first half - instruction code, second half - data or addr
 fun initInstrReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
     val directOut = sig(8)
-    LED(directOut, "instr reg direct out")
-    register(clk + controls[InstRegI]!! + bus, directOut)
-    connectToBus(controls[InstRegO]!!, bus, directOut.ss(4..7) + sig(4))
-    bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
-    controls[InstRegI]!!.apply {
-        forceUpdate(1)
-        clk.forceUpdate(0)
-        clk.forceUpdate(1)
-        forceUpdate(0)
-    }
+    val en = controls[InstRegI]!!
+    register(clk + en + bus, directOut)
+    connectToBus(controls[InstRegO]!!, bus, directOut)
+
     return directOut
 }
+
 fun initMemReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
     val directOut = sig(8)
-    register(clk + controls[MemRegI]!! + bus, directOut)
+    val en = controls[MemRegI]!!
+    register(clk + en + bus.ss(0..3)+sig(4), directOut)
+
     return directOut
 }
+
 fun initAReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
     val directOut = sig(8)
     register(clk + controls[ARegI]!! + bus, directOut)
     connectToBus(controls[ARegO]!!, bus, directOut)
     return directOut
 }
+
 fun initBReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
     val directOut = sig(8)
     register(clk + controls[BRegI]!! + bus, directOut)
     connectToBus(controls[BRegO]!!, bus, directOut)
     return directOut
 }
+
 fun initOutReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
     val directOut = sig(8)
     register(clk + controls[OutRegI]!! + bus, directOut)
     return directOut
 }
+
 fun connectToBus(en: Signals, bus: Signals, out: Signals) {
-    out.forEach { s ->
-        TriStateGate(listOf(s) + en, bus)
+    out.forEachIndexed { i, s ->
+        TriStateGate(listOf(s) + en, bus.ss(i))
     }
 }
 
-fun reset(data: Signals) {
-    data.forEach { it.forceUpdate(0) }
-}
 fun initPeka() {
     val controls = initControls()
-    val (clk, bus) = sigs(1, 8, 8)
+    val (clk, bus) = sigs(1, 8)
     val instRegDirectOut = initInstrReg(clk, controls, bus)
     val memRegDirectOut = initMemReg(clk, controls, bus)
     val aRegDirectOut = initAReg(clk, controls, bus)
@@ -123,23 +142,37 @@ fun initPeka() {
     val outpRegDirectOut = initOutReg(clk, controls, bus)
 
     initCounter(clk, controls, bus)
-    initControlUnit(clk, controls, instRegDirectOut)
     initMemory(controls, memRegDirectOut, bus)
     initAlu(controls, bus, aRegDirectOut, bRegDirectOut)
-    LED(outpRegDirectOut, "out")
-    LED(bus, "bus")
-    reset(instRegDirectOut)
-    reset(memRegDirectOut)
-    reset(aRegDirectOut)
-    reset(bRegDirectOut)
-    reset(outpRegDirectOut)
-    reset(bus)
+    initControlUnit(clk, controls, instRegDirectOut)
 
+    LED(memRegDirectOut, "MEM REG")
+    LED(outpRegDirectOut, "OUTPUT")
+    LED(instRegDirectOut, "INST REG")
+    LED(aRegDirectOut, "A REG")
+    LED(bRegDirectOut, "B REG")
+    LED(bus, "BUS")
+    LED(clk, "CLOCK")
+
+    clkReset!!.forceUpdate(1)
+    controls[CntCl]!!.forceUpdate(1)
+
+    clk.forceUpdate(1)
+    clk.forceUpdate(0)
+
+    clkReset!!.forceUpdate(0)
+    controls[CntCl]!!.forceUpdate(0)
+    controls[CntI]!!.forceUpdate(0)
+
+    printLeds()
     println("start update")
-    for(i in 0 .. 1000) {
-        clk.forceUpdate(0)
+    for (i in 0..12) {
+        println("------- step $i")
         clk.forceUpdate(1)
-        println("------------------------------------------------")
+        clk.forceUpdate(0)
+        printLeds()
+        println("------- step $i")
     }
 }
 
+fun printLeds() = leds.forEach { it.prnt() }
