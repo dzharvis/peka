@@ -75,8 +75,16 @@ fun nBitBinaryCounterSim(n: Int): () -> List<Int> {
 fun binToDec(data: List<Int>): Int {
     var result = 0
     for(bit in data.reversed()) {
-        result = result or bit
-        result = result shl 1
+        result = (result or bit) shl 1
     }
     return result shr 1
+}
+
+fun decToBin(data: Int, numBits: Int): List<Int> {
+    var currentData = data
+    return (0 until numBits).map {
+        val bit = currentData and 1
+        currentData = currentData shr 1
+        bit
+    }
 }
