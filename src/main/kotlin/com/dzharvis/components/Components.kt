@@ -43,8 +43,7 @@ fun dFlipFlop(input: Signals, output: Signals): Signals {
     val inv = NOT(d, sig(1)).output
     val and1 = AND(inv + clk, sig(1)).output
     val and2 = AND(d + clk, sig(1)).output
-    val nor1Out = output.ss(0)
-    val nor2Out = output.ss(1)
+    val (nor1Out, nor2Out) = output.bySize(1, 1)
     NOR(and1 + nor2Out, nor1Out)
     NOR(and2 + nor1Out, nor2Out)
     return output
@@ -191,7 +190,7 @@ fun alu(input: Signals, output: Signals) {
 }
 
 fun controller(input: Signals, output: Signals) {
-    val (clk, instr) = input.bySize(1, 4)
+    val (clk, instr, flagReg) = input.bySize(1, 4, 2)
     val (load, en, clockSet) = sigs(1, 1, 4)
     val subStep = sig(4)
 
@@ -200,10 +199,10 @@ fun controller(input: Signals, output: Signals) {
     val (wrR, rdR) = sigs(1, 1)
     val (outL, outR) = output.bySize(8, 8)
 
-    val memoryIn = subStep + instr
+    val memoryIn = subStep + instr + flagReg
     LED(memoryIn, "memory in")
-    memory8Bit(wrL + rdL + memoryIn + outL, outL, 8)
-    memory8Bit(wrR + rdR + memoryIn + outR, outR, 8)
+    memory8Bit(wrL + rdL + memoryIn + outL, outL, 10)
+    memory8Bit(wrR + rdR + memoryIn + outR, outR, 10)
 
     val memoryInState = memoryIn.remember()
     initializeMemory(wrL + rdL + memoryIn + outL, controllerInputTable, controllerOutputLeftCell)
@@ -232,20 +231,20 @@ var clkReset:Signals? = null
 
 val controllerInputTable = listOf(
     // fetch
-    listOf(-1, -1, -1, -1, 0, 0, 0, 0).reversed(),
-    listOf(-1, -1, -1, -1, 0, 0, 0, 1).reversed(),
-    // lda
-    listOf(0, 0, 0, 1, 0, 0, 1, 0).reversed(),
-    listOf(0, 0, 0, 1, 0, 0, 1, 1).reversed(),
-    listOf(0, 0, 0, 1, 0, 1, 0, 0).reversed(),
-    // add
-    listOf(0, 0, 1, 0, 0, 0, 1, 0).reversed(),
-    listOf(0, 0, 1, 0, 0, 0, 1, 1).reversed(),
-    listOf(0, 0, 1, 0, 0, 1, 0, 0).reversed(),
-    // out
-    listOf(1, 1, 1, 0, 0, 0, 1, 0).reversed(),
-    listOf(1, 1, 1, 0, 0, 0, 1, 1).reversed(),
-    listOf(1, 1, 1, 0, 0, 1, 0, 0).reversed()
+    listOf(-1, -1, -1, -1, -1, -1, 0, 0, 0, 0).reversed(),
+    listOf(-1, -1, -1, -1, -1, -1, 0, 0, 0, 1).reversed(),
+    // lda-1, -1,
+    listOf(-1, -1, 0, 0, 0, 1, 0, 0, 1, 0).reversed(),
+    listOf(-1, -1, 0, 0, 0, 1, 0, 0, 1, 1).reversed(),
+    listOf(-1, -1, 0, 0, 0, 1, 0, 1, 0, 0).reversed(),
+    // add-1, -1,
+    listOf(-1, -1, 0, 0, 1, 0, 0, 0, 1, 0).reversed(),
+    listOf(-1, -1, 0, 0, 1, 0, 0, 0, 1, 1).reversed(),
+    listOf(-1, -1, 0, 0, 1, 0, 0, 1, 0, 0).reversed(),
+    // out-1, -1,
+    listOf(-1, -1, 1, 1, 1, 0, 0, 0, 1, 0).reversed(),
+    listOf(-1, -1, 1, 1, 1, 0, 0, 0, 1, 1).reversed(),
+    listOf(-1, -1, 1, 1, 1, 0, 0, 1, 0, 0).reversed()
 )
 val controllerOutputLeftCell = listOf(
     // fetch
@@ -275,7 +274,7 @@ val controllerOutputRightCell = listOf(
     // add
     listOf(0, 0, 0, 0, 0, 0, 0, 0),
     listOf(0, 0, 0, 1, 0, 0, 0, 0),
-    listOf(0, 1, 0, 0, 0, 0, 0, 0),
+    listOf(1, 1, 0, 0, 0, 0, 0, 0),
     // out
     listOf(0, 0, 0, 0, 1, 0, 0, 0),
     listOf(0, 0, 0, 0, 0, 0, 0, 0),

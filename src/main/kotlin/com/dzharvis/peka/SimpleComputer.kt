@@ -1,61 +1,85 @@
 package com.dzharvis.peka
 
 import com.dzharvis.components.*
-import com.dzharvis.peka.Controls.*
 import utils.binToDec
 import utils.bits
 import utils.initializeMemory
 import utils.ss
 
-enum class Controls {
-    Halt,
-    MemRegI, MemI, MemO,
-    CntE, CntO, CntI, CntCl,
-    InstRegI, InstRegO,
-    ARegI, ARegO,
-    BRegI, BRegO,
-    Subst, AluO,
-    OutRegI,
-    Unused
-}
+val Halt = sig(1)
+val MemRegI = sig(1)
+val MemI = sig(1)
+val MemO = sig(1)
+val CntE = sig(1)
+val CntO = sig(1)
+val CntI = sig(1)
+val CntCl = sig(1)
+val InstRegI = sig(1)
+val InstRegO = sig(1)
+val ARegI = sig(1)
+val ARegO = sig(1)
+val BRegI = sig(1)
+val BRegO = sig(1)
+val Subst = sig(1)
+val AluO = sig(1)
+val OutRegI = sig(1)
+val FlagSet = sig(1)
 
-fun initControls() = Controls.values()
-    .map { it to sig(1) }
-    .toMap()
-
-fun initCounter(clk: Signals, controls: Map<Controls, Signals>, bus: Signals) {
-    val clear = controls[CntCl]!!
-    val ci = controls[CntI]!!
-    val ce = controls[CntE]!!
+fun initCounter(clk: Signals, bus: Signals) {
+    val clear = CntCl
+    val ci = CntI
+    val ce = CntE
     val counterIn = clear + ci + ce + clk + bus.ss(0..3)
     val counterDirectOur = sig(4)
     syncCounterWithEnable(counterIn, counterDirectOur)
     LED(counterDirectOur, "COUNTER DIRECT OUT")
-    controls[CntE]!!.forceUpdate(0)
-    controls[CntO]!!.forceUpdate(0)
-    controls[CntCl]!!.forceUpdate(0)
-    connectToBus(controls[CntO]!!, bus.ss(0..3), counterDirectOur)
+    CntE.forceUpdate(0)
+    CntO.forceUpdate(0)
+    CntCl.forceUpdate(0)
+    connectToBus(CntO, bus.ss(0..3), counterDirectOur)
 }
 
-fun initControlUnit(clk: Signals, controls: Map<Controls, Signals>, instrRegOutput: Signals) {
-    val controllerOut = controls[Halt]!! + controls[MemRegI]!! + controls[MemI]!! + controls[MemO]!! +
-            controls[InstRegO]!! + controls[InstRegI]!! + controls[ARegI]!! + controls[ARegO]!! +
-            controls[Unused]!! + controls[AluO]!! + controls[Subst]!! + controls[BRegI]!! +
-            controls[OutRegI]!! + controls[CntE]!! + controls[CntO]!! + controls[CntCl]!!
+fun initControlUnit(
+    clk: Signals,
+    instrRegOutput: Signals,
+    flagRegDirectOutp: Signals
+) {
+    val controllerOut =
+        Halt + MemRegI + MemI + MemO + InstRegO + InstRegI + ARegI + ARegO +
+                FlagSet + AluO + Subst + BRegI + OutRegI + CntE + CntO + CntCl
     LED(controllerOut, "controller")
-    controller(clk + instrRegOutput.ss(4..7), controllerOut)
+    controller(clk + instrRegOutput.ss(4..7) + flagRegDirectOutp, controllerOut)
+}
+
+fun initFlagRegister(clk: Signals, aluDirectOut: Signals, aluCarryBit: Signals): Signals {
+    val flagDirectOut = sig(8)
+    LED(flagDirectOut, "FLAG REG OUR")
+    val aluAllZeroes = aluDirectOut
+        .chunked(2)
+        .map { inp ->
+            NOR(inp, sig(1)).output[0]
+        }.let {
+            val outp = sig(1)
+            andn(it, outp, it.size)
+            outp
+        }
+    val flagInp = aluCarryBit + aluAllZeroes + sig(6)
+    LED(flagInp, "FLAG REG INP")
+    register(clk + FlagSet + flagInp, flagDirectOut)
+    return flagDirectOut.ss(0..1)
 }
 
 fun initAlu(
-    controls: Map<Controls, List<Signal>>,
-    bus: List<Signal>,
-    aRegDirectOut: List<Signal>,
-    bRegDirectOut: List<Signal>
-) {
+    bus: Signals,
+    aRegDirectOut: Signals,
+    bRegDirectOut: Signals
+): Pair<Signals, Signals> {
     val aluDirectOut = sig(8)
     LED(aluDirectOut, "ALU")
-    alu(controls[Subst]!! + aRegDirectOut + bRegDirectOut, aluDirectOut + sig(1))
-    connectToBus(controls[AluO]!!, bus, aluDirectOut)
+    val carryBit = sig(1)
+    alu(Subst + aRegDirectOut + bRegDirectOut, aluDirectOut + carryBit)
+    connectToBus(AluO, bus, aluDirectOut)
+    return aluDirectOut to carryBit
 }
 
 
@@ -76,10 +100,10 @@ val memoryValue = listOf(
 
 )
 
-fun initMemory(controls: Map<Controls, Signals>, memReg: Signals, bus: Signals) {
+fun initMemory(memReg: Signals, bus: Signals) {
     val memDirectOut = sig(8)
-    val wr = controls[MemI]!!
-    val rd = controls[MemO]!!
+    val wr = MemI
+    val rd = MemO
     val memin = wr + rd + memReg + memDirectOut
     memory8Bit(memin, memDirectOut, 8)
     val mm = memReg.remember()
@@ -91,40 +115,40 @@ fun initMemory(controls: Map<Controls, Signals>, memReg: Signals, bus: Signals) 
 }
 
 // first half - instruction code, second half - data or addr
-fun initInstrReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
+fun initInstrReg(clk: Signals, bus: Signals): Signals {
     val directOut = sig(8)
-    val en = controls[InstRegI]!!
+    val en = InstRegI
     register(clk + en + bus, directOut)
-    connectToBus(controls[InstRegO]!!, bus, directOut)
+    connectToBus(InstRegO, bus, directOut)
 
     return directOut
 }
 
-fun initMemReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
+fun initMemReg(clk: Signals, bus: Signals): Signals {
     val directOut = sig(8)
-    val en = controls[MemRegI]!!
-    register(clk + en + bus.ss(0..3)+sig(4), directOut)
+    val en = MemRegI
+    register(clk + en + bus.ss(0..3) + sig(4), directOut)
 
     return directOut
 }
 
-fun initAReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
+fun initAReg(clk: Signals, bus: Signals): Signals {
     val directOut = sig(8)
-    register(clk + controls[ARegI]!! + bus, directOut)
-    connectToBus(controls[ARegO]!!, bus, directOut)
+    register(clk + ARegI + bus, directOut)
+    connectToBus(ARegO, bus, directOut)
     return directOut
 }
 
-fun initBReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
+fun initBReg(clk: Signals, bus: Signals): Signals {
     val directOut = sig(8)
-    register(clk + controls[BRegI]!! + bus, directOut)
-    connectToBus(controls[BRegO]!!, bus, directOut)
+    register(clk + BRegI + bus, directOut)
+    connectToBus(BRegO, bus, directOut)
     return directOut
 }
 
-fun initOutReg(clk: Signals, controls: Map<Controls, List<Signal>>, bus: List<Signal>): List<Signal> {
+fun initOutReg(clk: Signals, bus: Signals): Signals {
     val directOut = sig(8)
-    register(clk + controls[OutRegI]!! + bus, directOut)
+    register(clk + OutRegI + bus, directOut)
     return directOut
 }
 
@@ -135,18 +159,18 @@ fun connectToBus(en: Signals, bus: Signals, out: Signals) {
 }
 
 fun initPeka() {
-    val controls = initControls()
     val (clk, bus) = sigs(1, 8)
-    val instRegDirectOut = initInstrReg(clk, controls, bus)
-    val memRegDirectOut = initMemReg(clk, controls, bus)
-    val aRegDirectOut = initAReg(clk, controls, bus)
-    val bRegDirectOut = initBReg(clk, controls, bus)
-    val outpRegDirectOut = initOutReg(clk, controls, bus)
+    val instRegDirectOut = initInstrReg(clk, bus)
+    val memRegDirectOut = initMemReg(clk, bus)
+    val aRegDirectOut = initAReg(clk, bus)
+    val bRegDirectOut = initBReg(clk, bus)
+    val outpRegDirectOut = initOutReg(clk, bus)
 
-    initCounter(clk, controls, bus)
-    initMemory(controls, memRegDirectOut, bus)
-    initAlu(controls, bus, aRegDirectOut, bRegDirectOut)
-    initControlUnit(clk, controls, instRegDirectOut)
+    initCounter(clk, bus)
+    initMemory(memRegDirectOut, bus)
+    val (aluDirectOutp, aluCarryBit) = initAlu(bus, aRegDirectOut, bRegDirectOut)
+    val flagRegDirectOutp = initFlagRegister(clk, aluDirectOutp, aluCarryBit)
+    initControlUnit(clk, instRegDirectOut, flagRegDirectOutp)
 
     LED(memRegDirectOut, "MEM REG")
     LED(outpRegDirectOut, "OUTPUT")
@@ -157,14 +181,14 @@ fun initPeka() {
     LED(clk, "CLOCK")
 
     clkReset!!.forceUpdate(1)
-    controls[CntCl]!!.forceUpdate(1)
+    CntCl.forceUpdate(1)
 
     clk.forceUpdate(1)
     clk.forceUpdate(0)
 
     clkReset!!.forceUpdate(0)
-    controls[CntCl]!!.forceUpdate(0)
-    controls[CntI]!!.forceUpdate(0)
+    CntCl.forceUpdate(0)
+    CntI.forceUpdate(0)
 
     printLeds()
     println("start update")
