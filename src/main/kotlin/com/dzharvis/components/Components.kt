@@ -1,5 +1,6 @@
 package com.dzharvis.components
 
+import com.dzharvis.peka.compile
 import utils.*
 
 fun fullAdder(input: Signals, output: Signals): Signals {
@@ -205,8 +206,11 @@ fun controller(input: Signals, output: Signals) {
     memory8Bit(wrR + rdR + memoryIn + outR, outR, 10)
 
     val memoryInState = memoryIn.remember()
-    initializeMemory(wrL + rdL + memoryIn + outL, controllerInputTable, controllerOutputLeftCell)
-    initializeMemory(wrR + rdR + memoryIn + outR, controllerInputTable, controllerOutputRightCell)
+    val instructions = compile()
+    instructions.forEach { instr ->
+        initializeMemory(wrL + rdL + memoryIn + outL, instr.steps.map { it.addr }, instr.steps.map { it.value.slice(0..7) })
+        initializeMemory(wrR + rdR + memoryIn + outR, instr.steps.map { it.addr }, instr.steps.map { it.value.slice(8..15) })
+    }
     memoryIn.forceUpdate(*memoryInState)
     println("memory init done-------------")
 
@@ -228,55 +232,3 @@ fun controller(input: Signals, output: Signals) {
 }
 
 var clkReset:Signals? = null
-
-val controllerInputTable = listOf(
-    // fetch
-    listOf(-1, -1, -1, -1, -1, -1, 0, 0, 0, 0).reversed(),
-    listOf(-1, -1, -1, -1, -1, -1, 0, 0, 0, 1).reversed(),
-    // lda-1, -1,
-    listOf(-1, -1, 0, 0, 0, 1, 0, 0, 1, 0).reversed(),
-    listOf(-1, -1, 0, 0, 0, 1, 0, 0, 1, 1).reversed(),
-    listOf(-1, -1, 0, 0, 0, 1, 0, 1, 0, 0).reversed(),
-    // add-1, -1,
-    listOf(-1, -1, 0, 0, 1, 0, 0, 0, 1, 0).reversed(),
-    listOf(-1, -1, 0, 0, 1, 0, 0, 0, 1, 1).reversed(),
-    listOf(-1, -1, 0, 0, 1, 0, 0, 1, 0, 0).reversed(),
-    // out-1, -1,
-    listOf(-1, -1, 1, 1, 1, 0, 0, 0, 1, 0).reversed(),
-    listOf(-1, -1, 1, 1, 1, 0, 0, 0, 1, 1).reversed(),
-    listOf(-1, -1, 1, 1, 1, 0, 0, 1, 0, 0).reversed()
-)
-val controllerOutputLeftCell = listOf(
-    // fetch
-    listOf(0, 1, 0, 0, 0, 0, 0, 0),
-    listOf(0, 0, 0, 1, 0, 1, 0, 0),
-    // lda
-    listOf(0, 1, 0, 0, 1, 0, 0, 0),
-    listOf(0, 0, 0, 1, 0, 0, 1, 0),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    // add
-    listOf(0, 1, 0, 0, 1, 0, 0, 0),
-    listOf(0, 0, 0, 1, 0, 0, 0, 0),
-    listOf(0, 0, 0, 0, 0, 0, 1, 0),
-    // out
-    listOf(0, 0, 0, 0, 0, 0, 0, 1),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0)
-)
-val controllerOutputRightCell = listOf(
-    // fetch
-    listOf(0, 0, 0, 0, 0, 0, 1, 0),
-    listOf(0, 0, 0, 0, 0, 1, 0, 0),
-    // lda
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    // add
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    listOf(0, 0, 0, 1, 0, 0, 0, 0),
-    listOf(1, 1, 0, 0, 0, 0, 0, 0),
-    // out
-    listOf(0, 0, 0, 0, 1, 0, 0, 0),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0),
-    listOf(0, 0, 0, 0, 0, 0, 0, 0)
-)

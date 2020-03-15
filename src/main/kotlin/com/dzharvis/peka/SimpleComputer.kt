@@ -6,24 +6,24 @@ import utils.bits
 import utils.initializeMemory
 import utils.ss
 
-val Halt = sig(1)
-val MemRegI = sig(1)
-val MemI = sig(1)
-val MemO = sig(1)
-val CntE = sig(1)
-val CntO = sig(1)
-val CntI = sig(1)
-val CntCl = sig(1)
-val InstRegI = sig(1)
-val InstRegO = sig(1)
-val ARegI = sig(1)
-val ARegO = sig(1)
-val BRegI = sig(1)
-val BRegO = sig(1)
-val Subst = sig(1)
-val AluO = sig(1)
-val OutRegI = sig(1)
-val FlagSet = sig(1)
+private val Halt = sig(1)
+private val MemRegI = sig(1)
+private val MemI = sig(1)
+private val MemO = sig(1)
+private val InstRegO = sig(1)
+private val InstRegI = sig(1)
+private val ARegI = sig(1)
+private val ARegO = sig(1)
+private val FlagSet = sig(1)
+private val AluO = sig(1)
+private val Subst = sig(1)
+private val BRegI = sig(1)
+private val OutRegI = sig(1)
+private val CntE = sig(1)
+private val CntO = sig(1)
+private val CntI = sig(1)
+private val CntCl = sig(1)
+private val BRegO = sig(1)
 
 fun initCounter(clk: Signals, bus: Signals) {
     val clear = CntCl
@@ -46,7 +46,7 @@ fun initControlUnit(
 ) {
     val controllerOut =
         Halt + MemRegI + MemI + MemO + InstRegO + InstRegI + ARegI + ARegO +
-                FlagSet + AluO + Subst + BRegI + OutRegI + CntE + CntO + CntCl
+                FlagSet + AluO + Subst + BRegI + OutRegI + CntE + CntO + CntI
     LED(controllerOut, "controller")
     controller(clk + instrRegOutput.ss(4..7) + flagRegDirectOutp, controllerOut)
 }
