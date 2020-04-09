@@ -83,23 +83,6 @@ fun initAlu(
 }
 
 
-val memoryAddress = listOf(
-    listOf(0, 0, 0, 0, 0, 0, 0, 0).reversed(),
-    listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed(),
-    listOf(0, 0, 0, 0, 0, 0, 1, 0).reversed(),
-    listOf(0, 0, 0, 0, 1, 1, 1, 0).reversed(),
-    listOf(0, 0, 0, 0, 1, 1, 1, 1).reversed()
-)
-
-val memoryValue = listOf(
-    listOf(0, 1, 1, 1, 1, 0, 0, 0), // ASM: [LDA 14]
-    listOf(1, 1, 1, 1, 0, 1, 0, 0), // ASM: [ADD 15]
-    listOf(0, 0, 0, 0, 0, 1, 1, 1), // ASM: [OUT]
-    listOf(0, 0, 1, 1, 1, 0, 0, 0), // DATA: [28]
-    listOf(0, 1, 1, 1, 0, 0, 0, 0)  // DATA: [14]
-
-)
-
 var memOn = sig(1)
 
 fun initMemory(clk: Signals, memReg: Signals, bus: Signals) {
@@ -109,7 +92,8 @@ fun initMemory(clk: Signals, memReg: Signals, bus: Signals) {
     val memin = clk + wr + memReg + bus
     memory8Bit(memin, memDirectOut, 8)
     val mm = memReg.remember()
-    initializeMemory(memin, memDirectOut, memoryAddress, memoryValue)
+    val program = compile(code)
+    initializeMemory(memin, memDirectOut, program.steps.map { it.addr }, program.steps.map { it.value })
     AND(MemI + memOn, wr)
     memReg.forceUpdate(*mm)
     LED(memReg, "RAM ADDR")
@@ -122,7 +106,7 @@ fun initInstrReg(clk: Signals, bus: Signals): Signals {
     val directOut = sig(8)
     val en = InstRegI
     register(clk + en + bus, directOut)
-    connectToBus(InstRegO, bus, directOut)
+    connectToBus(InstRegO, bus, directOut.ss(0..3) + sig(4))
 
     return directOut
 }
@@ -195,12 +179,14 @@ fun initPeka() {
 
     printLeds()
     println("start update")
-    for (i in 0..12) {
+    var i = 0
+    while (Halt[0].signal == 0) {
         println("------- step $i")
         clk.forceUpdate(1)
         clk.forceUpdate(0)
         printLeds()
         println("------- step $i")
+        i++
     }
 
     println("Final result: " + binToDec(outpRegDirectOut.bits()))
