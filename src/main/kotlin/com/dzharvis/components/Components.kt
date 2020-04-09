@@ -1,6 +1,7 @@
 package com.dzharvis.components
 
 import com.dzharvis.peka.compile
+import com.dzharvis.peka.connectToBus
 import utils.*
 
 fun fullAdder(input: Signals, output: Signals): Signals {
@@ -140,14 +141,6 @@ fun register(input: Signals, output: Signals) {
     }
 }
 
-fun register8BitTriState(input: Signals, output: Signals) {
-    val (wr, rd, input) = input.bySize(1, 1, 8)
-    for (i in 0..7) {
-        val trstIn = sig(1)
-        TriStateGate(trstIn + rd, output.ss(i))
-        dFlipFlop(input.ss(i) + wr, trstIn + sig(1))
-    }
-}
 
 fun decoder(input: Signals, output: Signals, size: Int) {
     val (en, inp) = input.bySize(1, size)
@@ -167,19 +160,20 @@ fun decoder(input: Signals, output: Signals, size: Int) {
     }
 }
 
-// input and output is the same here as this is a bus
 fun memory8Bit(input: Signals, output: Signals, size: Int) {
-    val (wr, rd, addr, input) = input.bySize(1, 1, size, 8)
+    val (clk, wr, addr, input) = input.bySize(1, 1, size, 8)
     val numCells = size.powOfTwo()
 
     val writeDecoded = sig(numCells)
     decoder(wr + addr, writeDecoded, size)
 
     val readDecoded = sig(numCells)
-    decoder(rd + addr, readDecoded, size)
+    decoder(sig(1).apply { forceUpdate(1) } + addr, readDecoded, size)
 
     for (i in 0 until numCells) {
-        register8BitTriState(writeDecoded.ss(i) + readDecoded.ss(i) + input, input)
+        val registerDirectOutput = sig(8)
+        register(clk + writeDecoded.ss(i) + input, registerDirectOutput)
+        connectToBus(readDecoded.ss(i), output, registerDirectOutput)
     }
 }
 
@@ -199,17 +193,18 @@ fun controller(input: Signals, output: Signals) {
     val (wrL, rdL) = sigs(1, 1, 4)
     val (wrR, rdR) = sigs(1, 1)
     val (outL, outR) = output.bySize(8, 8)
+    val (inpL, inpR) = sigs(8, 8)
 
     val memoryIn = subStep + instr + flagReg
     LED(memoryIn, "memory in")
-    memory8Bit(wrL + rdL + memoryIn + outL, outL, 10)
-    memory8Bit(wrR + rdR + memoryIn + outR, outR, 10)
+    memory8Bit(clk + wrL + memoryIn + inpL, outL, 10)
+    memory8Bit(clk + wrR + memoryIn + inpR, outR, 10)
 
     val memoryInState = memoryIn.remember()
     val instructions = compile()
     instructions.forEach { instr ->
-        initializeMemory(wrL + rdL + memoryIn + outL, instr.steps.map { it.addr }, instr.steps.map { it.value.slice(0..7) })
-        initializeMemory(wrR + rdR + memoryIn + outR, instr.steps.map { it.addr }, instr.steps.map { it.value.slice(8..15) })
+        initializeMemory(clk + wrL + memoryIn + inpL, outL, instr.steps.map { it.addr }, instr.steps.map { it.value.slice(0..7) })
+        initializeMemory(clk + wrR + memoryIn + inpR, outR, instr.steps.map { it.addr }, instr.steps.map { it.value.slice(8..15) })
     }
     memoryIn.forceUpdate(*memoryInState)
     println("memory init done-------------")
@@ -227,8 +222,6 @@ fun controller(input: Signals, output: Signals) {
 
     println("clock init done-------------")
     LED(output, "CONTROLLER OUT")
-    rdL.forceUpdate(1)
-    rdR.forceUpdate(1)
 }
 
 var clkReset:Signals? = null

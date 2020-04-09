@@ -10,27 +10,6 @@ class ComponentsTest {
 
     @Test
     fun `register tri state test`() {
-        val (wr, rd, data, dataOut) = sigs(1, 1, 8, 8)
-        register8BitTriState(wr + rd + data, dataOut)
-        LED(dataOut)
-
-        data.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
-        wr.forceUpdate(1)
-        wr.forceUpdate(0)
-
-        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 0), dataOut.bits())
-        rd.forceUpdate(1)
-        assertEquals(listOf(0, 0, 0, 0, 0, 0, 0, 0), dataOut.bits())
-        rd.forceUpdate(0)
-
-
-        data.forceUpdate(0, 0, 1, 0, 0, 0, 1, 0)
-        wr.forceUpdate(1)
-        wr.forceUpdate(0)
-        rd.forceUpdate(1)
-        assertEquals(listOf(0, 0, 1, 0, 0, 0, 1, 0), dataOut.bits())
-        rd.forceUpdate(0)
-        assertEquals(listOf(0, 0, 1, 0, 0, 0, 1, 0), dataOut.bits())
     }
 
     @Test
@@ -283,60 +262,53 @@ class ComponentsTest {
 
     @Test
     fun `memory test`() {
-        val (wr, rd, addr, bus) = sigs(1, 1, 4, 8)
-        memory8Bit(wr + rd + addr + bus, bus, 4)
+        val (clk, wr, rd, addr, input, output) = sigs(1, 1, 1, 4, 8, 8)
+        memory8Bit(clk + wr + rd + addr + input, output, 4)
 
-        rd.forceUpdate(0)
-        bus.forceUpdate(1, 0, 1, 0, 1, 0, 1, 0)
+
+        input.forceUpdate(1, 0, 1, 0, 1, 0, 1, 0)
         addr.forceUpdate(0, 1, 0, 0)
         wr.forceUpdate(1)
-
+        pushClk(clk)
         wr.forceUpdate(0)
-        rd.forceUpdate(0)
-        bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
+        input.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
 
-        rd.forceUpdate(1)
 
         assertEquals(
             listOf(1, 0, 1, 0, 1, 0, 1, 0),
-            bus.bits()
+            output.bits()
         )
 
         addr.forceUpdate(0, 0, 0, 0)
 
         assertEquals(
             listOf(0, 0, 0, 0, 0, 0, 0, 0),
-            bus.bits()
+            output.bits()
         )
 
         addr.forceUpdate(0, 1, 0, 0)
         assertEquals(
             listOf(1, 0, 1, 0, 1, 0, 1, 0),
-            bus.bits()
+            output.bits()
         )
 
-        rd.forceUpdate(0)
-        bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
-        addr.forceUpdate(0, 0, 0, 0)
-        assertEquals(
-            listOf(0, 0, 0, 0, 0, 0, 0, 0),
-            bus.bits()
-        )
-        addr.forceUpdate(0, 1, 0, 0)
-        assertEquals(
-            listOf(0, 0, 0, 0, 0, 0, 0, 0),
-            bus.bits()
-        )
+        input.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
 
-        bus.forceUpdate(0, 1, 1, 0, 0, 0, 0, 0)
-        addr.forceUpdate(0, 1, 0, 0)
+        input.forceUpdate(0, 1, 1, 0, 0, 0, 0, 0)
+        addr.forceUpdate(0, 0, 1, 0)
         wr.forceUpdate(1)
+        pushClk(clk)
         wr.forceUpdate(0)
-        bus.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
-        rd.forceUpdate(1)
+        input.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
         assertEquals(
             listOf(0, 1, 1, 0, 0, 0, 0, 0),
-            bus.bits()
+            output.bits()
+        )
+
+        addr.forceUpdate(0, 1, 0, 0)
+        assertEquals(
+            listOf(1, 0, 1, 0, 1, 0, 1, 0),
+            output.bits()
         )
 
     }
@@ -376,8 +348,8 @@ class ComponentsTest {
 
     @Test
     fun `memory init test`() {
-        val (wr, rd, addr, bus) = sigs(1, 1, 8, 8)
-        memory8Bit(wr + rd + addr + bus, bus, 8)
+        val (clk, wr, rd, addr, input, output) = sigs(1, 1, 1, 8, 8, 8)
+        memory8Bit(clk + wr + addr + input, output, 8)
 
         val inpTable = listOf(
             listOf(0, 0, 0, 0, 0, 0, 0, 0),
@@ -403,26 +375,30 @@ class ComponentsTest {
             listOf(1, 1, 0, 1, 0, 0, 0, 1)
         )
 
-        initializeMemory(wr + rd + addr + bus, inpTable, outTable)
+        initializeMemory(clk + wr + addr + input, output, inpTable, outTable)
 
-        rd.forceUpdate(1)
 
         addr.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
-        assertEquals(listOf(0, 0, 0, 0, 1, 1, 1, 1), bus.bits())
+        assertEquals(listOf(0, 0, 0, 0, 1, 1, 1, 1), output.bits())
 
         addr.forceUpdate(0, 0, 0, 0, 0, 0, 1, 1)
-        assertEquals(listOf(0, 1, 0, 1, 0, 0, 0, 1), bus.bits())
+        assertEquals(listOf(0, 1, 0, 1, 0, 0, 0, 1), output.bits())
 
         addr.forceUpdate(0, 0, 0, 0, 1, 0, 0, 0)
-        assertEquals(listOf(1, 1, 0, 1, 0, 0, 0, 1), bus.bits())
+        assertEquals(listOf(1, 1, 0, 1, 0, 0, 0, 1), output.bits())
+
+        inpTable.zip(outTable).forEach {(i, o) ->
+            addr.forceUpdate(*i.toIntArray())
+            assertEquals(o, output.bits())
+        }
     }
 
     @Test
     fun `controller test`() {
-        val (clk, instr, outp) = sigs(1, 8, 16)
+        val (clk, instr, outp) = sigs(1, 6, 16)
         controller(clk + instr, outp)
 
-        instr.forceUpdate(*listOf(0, 0, 0, 0, 0, 0, 0, 1).reversed().toIntArray())
+        instr.forceUpdate(*listOf(0, 0, 0, 0, 0, 1).reversed().toIntArray())
         assertEquals(
             listOf(0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
             outp.bits()

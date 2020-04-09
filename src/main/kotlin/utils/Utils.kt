@@ -4,7 +4,7 @@ import com.dzharvis.components.Signals
 import com.dzharvis.components.forceUpdate
 
 fun unzip(elems: List<Int>): List<List<Int>> {
-    return if(elems.contains(-1)) {
+    return if (elems.contains(-1)) {
         val i = elems.indexOf(-1)
         val newElems1 = elems.slice(0 until i) + 0 + elems.slice((i + 1) until elems.size)
         val newElems2 = elems.slice(0 until i) + 1 + elems.slice((i + 1) until elems.size)
@@ -14,7 +14,7 @@ fun unzip(elems: List<Int>): List<List<Int>> {
     }
 }
 
-fun initializeMemory(input: Signals, inpTable: List<List<Int>>, outTable: List<List<Int>>) {
+fun initializeMemory(input: Signals, output: Signals, inpTable: List<List<Int>>, outTable: List<List<Int>>) {
     require(inpTable.size == outTable.size)
     // -1 means for any input value - which means that we should iterate over each possible value combinations
     val extractedTable = inpTable.zip(outTable).flatMap { (i, o) ->
@@ -24,24 +24,25 @@ fun initializeMemory(input: Signals, inpTable: List<List<Int>>, outTable: List<L
     }
     //
 
-    val (wr, rd, address, input) = input.bySize(1, 1, inpTable.first().size, 8)
+    val (clk, wr, address, input) = input.bySize(1, 1, inpTable.first().size, 8)
 
     extractedTable.forEach { (currentAddress, currentValue) ->
         input.forceUpdate(*currentValue.toIntArray())
-        require(input.bits() == currentValue)
         address.forceUpdate(*currentAddress.toIntArray())
         wr.forceUpdate(1)
+        clk.forceUpdate(1)
+        require(input.bits() == currentValue)
+        clk.forceUpdate(0)
         wr.forceUpdate(0)
+        require(input.bits() == currentValue)
 
-        // check we car read value currently written
-        input.forceUpdate(0, 0, 0, 0, 0, 0, 0, 0)
-        address.forceUpdate(*generateSequence { 0 }.take(inpTable[0].size).toList().toIntArray())
-        rd.forceUpdate(1)
-        address.forceUpdate(*currentAddress.toIntArray())
-        require(input.bits() == currentValue) {
-            println("Expected ${currentValue}, got ${input.bits()}")
+    }
+    // check we can read value currently written
+    extractedTable.forEach { (currAddr, currValue) ->
+        address.forceUpdate(*currAddr.toIntArray())
+        if(output.bits() != currValue) {
+            println("Expected ${currValue}, got ${output.bits()}, at addr: ${currAddr}")
         }
-        rd.forceUpdate(0)
     }
 }
 
@@ -74,7 +75,7 @@ fun nBitBinaryCounterSim(n: Int): () -> List<Int> {
 
 fun binToDec(data: List<Int>): Int {
     var result = 0
-    for(bit in data.reversed()) {
+    for (bit in data.reversed()) {
         result = (result or bit) shl 1
     }
     return result shr 1

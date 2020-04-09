@@ -100,14 +100,17 @@ val memoryValue = listOf(
 
 )
 
-fun initMemory(memReg: Signals, bus: Signals) {
+var memOn = sig(1)
+
+fun initMemory(clk: Signals, memReg: Signals, bus: Signals) {
     val memDirectOut = sig(8)
-    val wr = MemI
+    val wr = sig(1)
     val rd = MemO
-    val memin = wr + rd + memReg + memDirectOut
+    val memin = clk + wr + memReg + bus
     memory8Bit(memin, memDirectOut, 8)
     val mm = memReg.remember()
-    initializeMemory(memin, memoryAddress, memoryValue)
+    initializeMemory(memin, memDirectOut, memoryAddress, memoryValue)
+    AND(MemI + memOn, wr)
     memReg.forceUpdate(*mm)
     LED(memReg, "RAM ADDR")
     LED(memDirectOut, "RAM OUT")
@@ -167,12 +170,12 @@ fun initPeka() {
     val outpRegDirectOut = initOutReg(clk, bus)
 
     initCounter(clk, bus)
-    initMemory(memRegDirectOut, bus)
+    initMemory(clk, memRegDirectOut, bus)
     val (aluDirectOutp, aluCarryBit) = initAlu(bus, aRegDirectOut, bRegDirectOut)
     val flagRegDirectOutp = initFlagRegister(clk, aluDirectOutp, aluCarryBit)
     initControlUnit(clk, instRegDirectOut, flagRegDirectOutp)
 
-    LED(memRegDirectOut, "MEM REG")
+    memOn.forceUpdate(1)
     LED(outpRegDirectOut, "OUTPUT")
     LED(instRegDirectOut, "INST REG")
     LED(aRegDirectOut, "A REG")
